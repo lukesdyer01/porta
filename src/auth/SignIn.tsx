@@ -5,10 +5,6 @@ type Step = 'email' | 'code'
 
 /** Supabase phrases these for developers; the family needs plainer words. */
 function humanize(message: string): string {
-  // The gate prefixes this so the UI can react; it is not for reading.
-  if (message.startsWith('NEEDS_CODE:')) {
-    return 'First time here? Enter the family code below.'
-  }
   const m = message.toLowerCase()
   if (m.includes('invite-only') || m.includes('not allowed') || m.includes('403'))
     return "That email isn't on the family list yet. Ask Luke to add it."
@@ -28,8 +24,6 @@ export default function SignIn() {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [cooldown, setCooldown] = useState(0)
-  const [needsCode, setNeedsCode] = useState(false)
-  const [inviteCode, setInviteCode] = useState('')
   const codeRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -50,19 +44,10 @@ export default function SignIn() {
     setBusy(true)
     setError(null)
 
-    const code = inviteCode.trim()
-    const { error } = await supabase.auth.signInWithOtp({
-      email: address,
-      // Only read on signup; existing members can send this or not, it is
-      // ignored for them.
-      options: code ? { data: { invite_code: code } } : undefined,
-    })
+    const { error } = await supabase.auth.signInWithOtp({ email: address })
     setBusy(false)
 
     if (error) {
-      // The gate asks for a family code only when it needs one, so people who
-      // already have an account never see the field.
-      if (error.message.startsWith('NEEDS_CODE:')) setNeedsCode(true)
       setError(humanize(error.message))
       return
     }
@@ -122,30 +107,10 @@ export default function SignIn() {
               placeholder="you@example.com"
               className="mt-3 w-full rounded-lg border border-[color:var(--border)] bg-[color:var(--surface)] px-3 py-2.5 text-base outline-none focus:border-[color:var(--accent)] focus:ring-2 focus:ring-[color:var(--accent)]/25"
             />
-            {needsCode && (
-              <div className="mt-4">
-                <label htmlFor="invite" className="block text-sm font-medium">
-                  Family code
-                </label>
-                <p className="mt-1 text-sm text-[color:var(--text-muted)]">
-                  Only needed the first time. Ask Luke if you don&rsquo;t have it.
-                </p>
-                <input
-                  id="invite"
-                  value={inviteCode}
-                  onChange={(e) => setInviteCode(e.target.value)}
-                  autoCapitalize="none"
-                  autoCorrect="off"
-                  spellCheck={false}
-                  placeholder="familycode"
-                  className="mt-1.5 w-full rounded-lg border border-[color:var(--border)] bg-[color:var(--surface)] px-3 py-2.5 text-base outline-none focus:border-[color:var(--accent)] focus:ring-2 focus:ring-[color:var(--accent)]/25"
-                />
-              </div>
-            )}
 
             <button
               type="submit"
-              disabled={busy || !email.trim() || (needsCode && !inviteCode.trim())}
+              disabled={busy || !email.trim()}
               className="mt-4 w-full rounded-lg bg-[color:var(--accent)] px-4 py-2.5 font-medium text-[color:var(--accent-contrast)] transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {busy ? 'Sending…' : 'Send code'}

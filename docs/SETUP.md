@@ -54,33 +54,26 @@ from.
 
 ## Inviting the rest of the family
 
-**Text them the family code.** They enter their email, the site asks for the code, and
-they're in — no action from you. A valid code writes their address into
-`allowed_emails`, so you still get a per-person list and can see who joined with which
-code (`select email, note from public.allowed_emails`).
-
-The code is deliberately not the surname: the site it guards is titled "King Family Beach
-Week", so a surname would be printed on the thing it protects.
-
-Change or rotate it any time — nothing in the app hardcodes the value:
-
-```sql
-update public.invite_codes set active = false where code = 'oldcode';
-insert into public.invite_codes (code, label) values ('newcode', 'Family code 2027');
-```
-
-Codes support an expiry and a use cap if you want a tighter one:
-
-```sql
-insert into public.invite_codes (code, label, expires_at, max_uses)
-values ('oneshot', 'For Aunt Sue', now() + interval '7 days', 1);
-```
-
-You can still add someone by address directly, which skips the code entirely:
+Access is invite-by-email only. An address is either on the allowlist or it isn't — there
+is no shared code.
 
 ```sql
 insert into public.allowed_emails (email, note)
 values ('aunt.sue@example.com', 'Sue');
+```
+
+Make someone an organizer (can create trips and manage the list). Set it before their
+first sign-in and the profile picks it up automatically:
+
+```sql
+insert into public.allowed_emails (email, note, role)
+values ('someone@example.com', 'co-organizer', 'organizer');
+```
+
+Already signed in? Promote them directly — `ensure_profile()` never overwrites a role:
+
+```sql
+update public.profiles set role = 'organizer' where email = 'someone@example.com';
 ```
 
 Removing someone revokes access on their next click:
@@ -88,6 +81,7 @@ Removing someone revokes access on their next click:
 ```sql
 delete from public.allowed_emails where email = 'someone@example.com';
 ```
+
 
 ## After any future migration
 
