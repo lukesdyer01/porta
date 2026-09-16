@@ -7,9 +7,11 @@ import { useAuth } from '../auth/useAuth'
  * bottom bar without scrolling — that's where it will actually be used.
  */
 const NAV = [{ to: '/', label: 'Trip', end: true }]
+const ORGANIZER_NAV = [{ to: '/members', label: 'Members', end: false }]
 
 export default function AppShell() {
-  const { profile, signOut } = useAuth()
+  const { profile, signOut, isOrganizer } = useAuth()
+  const nav = isOrganizer ? [...NAV, ...ORGANIZER_NAV] : NAV
 
   return (
     <div className="flex min-h-dvh flex-col">
@@ -25,7 +27,7 @@ export default function AppShell() {
           </div>
 
           <nav className="hidden gap-1 sm:flex">
-            {NAV.map((item) => (
+            {nav.map((item) => (
               <NavLink
                 key={item.to}
                 to={item.to}

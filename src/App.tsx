@@ -6,6 +6,7 @@ import SignIn from './auth/SignIn'
 import AppShell from './components/AppShell'
 import Spinner from './components/Spinner'
 import { isConfigured } from './lib/supabase'
+import Admin from './pages/Admin'
 import Home from './pages/Home'
 import NotConfigured from './pages/NotConfigured'
 import Pending from './pages/Pending'
@@ -29,6 +30,7 @@ function Gate() {
       <Route element={<AppShell />}>
         <Route index element={<Home />} />
         <Route path="profile" element={<Profile />} />
+        <Route path="members" element={<Admin />} />
         <Route path="*" element={<Home />} />
       </Route>
     </Routes>
