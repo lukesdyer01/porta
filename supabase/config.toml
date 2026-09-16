@@ -159,7 +159,9 @@ site_url = "https://lukesdyer01.github.io/porta/"
 # The public URL that Auth serves on. Defaults to the API external URL with `/auth/v1` appended.
 # external_url = ""
 # A list of *exact* URLs that auth providers are permitted to redirect to post authentication.
-additional_redirect_urls = ["https://lukesdyer01.github.io/porta/**", "http://localhost:5173/**"]
+# Vite falls through to the next free port when 5173 is taken, so allow a
+# small range rather than having local sign-in break on port drift.
+additional_redirect_urls = ["https://lukesdyer01.github.io/porta/**", "http://localhost:5173/**", "http://localhost:5174/**", "http://localhost:5175/**", "http://localhost:5176/**"]
 # How long tokens are valid for, in seconds. Defaults to 3600 (1 hour), maximum 604,800 (1 week).
 jwt_expiry = 3600
 # JWT issuer URL. If not set, defaults to auth.external_url.
@@ -247,15 +249,18 @@ otp_expiry = 3600
 # The default templates only contain a link. The 6-digit code is the primary
 # sign-in path here — a link binds to the browser that requested it, so opening
 # the email on a phone after requesting on a laptop fails. Lead with the code.
-[auth.email.template.magic_link]
-subject = "Your beach week sign-in code"
-content_path = "./supabase/templates/magic_link.html"
-
-# New accounts get the confirmation template rather than magic_link, so it has
-# to carry the code too.
-[auth.email.template.confirmation]
-subject = "Your beach week sign-in code"
-content_path = "./supabase/templates/confirmation.html"
+# >>> UNCOMMENT THESE TWO BLOCKS ONCE RESEND SMTP IS ENABLED <<<
+# Free projects on the default mail provider reject ANY template change, and
+# that rejection fails the whole auth config push -- including unrelated
+# settings like redirect URLs. So they stay commented until SMTP is on, then
+# uncomment and run `supabase config push`.
+# [auth.email.template.magic_link]
+# subject = "Your beach week sign-in code"
+# content_path = "./supabase/templates/magic_link.html"
+#
+# [auth.email.template.confirmation]
+# subject = "Your beach week sign-in code"
+# content_path = "./supabase/templates/confirmation.html"
 
 # Uncomment to customize email template
 # [auth.email.template.invite]

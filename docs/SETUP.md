@@ -44,8 +44,13 @@ from.
 3. Supabase dashboard → **Project Settings → Authentication → SMTP Settings**:
    - Host `smtp.resend.com`, port `465`, username `resend`, password = your Resend API key
    - Set sender name and address
-4. Re-run `supabase config push`. This applies the email templates **and** the 60/hour
-   rate limit, both of which are currently blocked by the free default provider.
+4. **Uncomment the two `[auth.email.template.*]` blocks in `supabase/config.toml`**, then
+   run `supabase config push`. This applies the code-first email templates and the 60/hour
+   rate limit, both currently blocked by the free default provider.
+
+   They are commented out on purpose: a free project rejects any template change, and that
+   rejection fails the *entire* auth config push — so leaving them in would block unrelated
+   settings like redirect URLs from ever updating.
 
 ## Inviting the rest of the family
 
