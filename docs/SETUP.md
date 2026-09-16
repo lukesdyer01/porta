@@ -54,33 +54,20 @@ from.
 
 ## Inviting the rest of the family
 
-Access is invite-by-email only. An address is either on the allowlist or it isn't — there
-is no shared code.
+Sign in and use the **Members** screen (organizers only). Paste in any number of addresses
+— commas, one per line, or copied straight out of a mail client — and invite them in one
+go. The same screen promotes and demotes organizers and revokes access.
 
-```sql
-insert into public.allowed_emails (email, note)
-values ('aunt.sue@example.com', 'Sue');
-```
+Access is invite-by-email only: an address is on the list or it is not. Removing someone
+takes effect on their next click, and anything they wrote stays.
 
-Make someone an organizer (can create trips and manage the list). Set it before their
-first sign-in and the profile picks it up automatically:
+Two guards worth knowing about, both enforced in the database rather than the page, so a
+hand-written API call cannot get around them:
 
-```sql
-insert into public.allowed_emails (email, note, role)
-values ('someone@example.com', 'co-organizer', 'organizer');
-```
-
-Already signed in? Promote them directly — `ensure_profile()` never overwrites a role:
-
-```sql
-update public.profiles set role = 'organizer' where email = 'someone@example.com';
-```
-
-Removing someone revokes access on their next click:
-
-```sql
-delete from public.allowed_emails where email = 'someone@example.com';
-```
+- The last organizer cannot be removed or demoted — otherwise nobody could create a trip
+  and only raw SQL could fix it.
+- Changing anyone's role goes through a function. Members are not granted write access to
+  the `role` column at all, so a member cannot promote themselves.
 
 
 ## After any future migration
