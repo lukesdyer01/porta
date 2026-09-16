@@ -28,3 +28,7 @@ dist-ssr
 .env
 .env.local
 .env.*.local
+
+# Bootstrap contains a real email address; this repo is public.
+supabase/migrations/99_bootstrap_local.sql
+.env.local

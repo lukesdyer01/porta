@@ -3,7 +3,7 @@
 -- about on arrival day.
 -- ===========================================================================
 
-create table public.trips (
+create table if not exists public.trips (
   id         uuid primary key default gen_random_uuid(),
   year       integer not null unique check (year between 2000 and 2100),
   name       text not null default '',
@@ -18,9 +18,9 @@ create table public.trips (
     check (end_date is null or start_date is null or end_date >= start_date)
 );
 
-create index trips_year_desc_idx on public.trips (year desc);
+create index if not exists trips_year_desc_idx on public.trips (year desc);
 
-create table public.houses (
+create table if not exists public.houses (
   id              uuid primary key default gen_random_uuid(),
   trip_id         uuid not null references public.trips(id) on delete cascade,
   name            text not null default '',
@@ -44,12 +44,12 @@ create table public.houses (
   constraint houses_latlng_together check ((lat is null) = (lng is null))
 );
 
-create index houses_trip_idx   on public.houses (trip_id);
-create index houses_latlng_idx on public.houses (lat, lng) where lat is not null;
+create index if not exists houses_trip_idx   on public.houses (trip_id);
+create index if not exists houses_latlng_idx on public.houses (lat, lng) where lat is not null;
 
 -- Gate code, pool code, wifi, trash day. Free-form label/value so a new house
 -- with a quirk ("outdoor shower key") needs no migration.
-create table public.house_info (
+create table if not exists public.house_info (
   id         uuid primary key default gen_random_uuid(),
   house_id   uuid not null references public.houses(id) on delete cascade,
   label      text not null check (length(btrim(label)) between 1 and 60),
@@ -61,11 +61,20 @@ create table public.house_info (
   unique (house_id, label)
 );
 
-create index house_info_house_idx on public.house_info (house_id, sort_order);
+create index if not exists house_info_house_idx on public.house_info (house_id, sort_order);
 
+drop trigger if exists trips_touch on public.trips;
 create trigger trips_touch before update on public.trips
   for each row execute function public.touch_updated_at();
+drop trigger if exists houses_touch on public.houses;
 create trigger houses_touch before update on public.houses
   for each row execute function public.touch_updated_at();
+drop trigger if exists house_info_touch on public.house_info;
 create trigger house_info_touch before update on public.house_info
   for each row execute function public.touch_updated_at();
+
+-- Table-level grants. 00_prelude changes the schema's default privileges, so
+-- state these explicitly rather than relying on what a new table inherits.
+grant select, insert, update, delete on public.trips      to authenticated;
+grant select, insert, update, delete on public.houses     to authenticated;
+grant select, insert, update, delete on public.house_info to authenticated;

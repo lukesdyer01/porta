@@ -13,12 +13,14 @@ alter table public.allowed_emails enable row level security;
 -- ---------------------------------------------------------------------------
 -- profiles
 -- ---------------------------------------------------------------------------
+drop policy if exists profiles_select on public.profiles;
 create policy profiles_select on public.profiles
   for select to authenticated
   using ( (select public.is_member()) or id = (select auth.uid()) );
   -- The OR lets a signed-in but not-yet-approved person load their own row, so
   -- they see "your account is pending" instead of an empty screen.
 
+drop policy if exists profiles_update_self on public.profiles;
 create policy profiles_update_self on public.profiles
   for update to authenticated
   using      ( id = (select auth.uid()) )
@@ -29,23 +31,28 @@ create policy profiles_update_self on public.profiles
 -- ---------------------------------------------------------------------------
 -- households — any member may create and rename; only organizers delete.
 -- ---------------------------------------------------------------------------
+drop policy if exists households_select on public.households;
 create policy households_select on public.households
   for select to authenticated using ( (select public.is_member()) );
 
+drop policy if exists households_insert on public.households;
 create policy households_insert on public.households
   for insert to authenticated with check ( (select public.is_member()) );
 
+drop policy if exists households_update on public.households;
 create policy households_update on public.households
   for update to authenticated
   using      ( (select public.is_member()) )
   with check ( (select public.is_member()) );
 
+drop policy if exists households_delete on public.households;
 create policy households_delete on public.households
   for delete to authenticated using ( (select public.is_organizer()) );
 
 -- ---------------------------------------------------------------------------
 -- allowed_emails — organizers only. This list is who can enter the app at all.
 -- ---------------------------------------------------------------------------
+drop policy if exists allowed_emails_all on public.allowed_emails;
 create policy allowed_emails_all on public.allowed_emails
   for all to authenticated
   using      ( (select public.is_organizer()) )

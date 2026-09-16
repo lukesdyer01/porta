@@ -17,6 +17,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return
     }
 
+    // Supabase no longer lets us hang a trigger on auth.users, so the profile
+    // row is created here instead. It is an upsert that also re-derives
+    // is_active from the invite list, which is what makes the "Check again"
+    // button on the pending screen work.
+    const { error: ensureError } = await supabase.rpc('ensure_profile')
+    if (ensureError) console.error('ensure_profile failed:', ensureError.message)
+
     const { data, error } = await supabase
       .from('profiles')
       .select('id, email, full_name, display_name, avatar_path, household_id, role, is_active')

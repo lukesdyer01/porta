@@ -52,7 +52,7 @@ export default function SignIn() {
     }
     setEmail(address)
     setStep('code')
-    setCooldown(45)
+    setCooldown(60)
   }
 
   async function verify(e: React.FormEvent) {

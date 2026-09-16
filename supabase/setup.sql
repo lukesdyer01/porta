@@ -6,48 +6,94 @@
 -- ======================== 00_prelude.sql ========================
 
 -- ===========================================================================
--- 00_prelude.sql — extensions, enums, and locking the anon role out entirely.
+-- 00_prelude.sql — extensions, enums, and locking the anon role down.
+--
+-- Every migration here is written to be safely re-runnable: paste the whole
+-- bundle again and it should succeed, not error on "already exists".
 -- ===========================================================================
 
 create extension if not exists "pgcrypto" with schema extensions;
 
--- The publishable key is baked into a public GitHub Pages bundle, so treat the
--- `anon` role as hostile: it gets nothing in `public` by default. Every real
--- capability is granted to `authenticated` and gated further by RLS.
-revoke all on schema public from anon;
-grant usage on schema public to authenticated;
+-- The publishable key is baked into a public GitHub Pages bundle, so treat
+-- `anon` as hostile. It keeps USAGE on the schema — PostgREST needs that to
+-- resolve ping() below — but gets no tables and no functions beyond the ones
+-- granted by name.
+grant usage on schema public to anon, authenticated;
 
-alter default privileges in schema public revoke all on tables from anon;
-alter default privileges in schema public revoke all on functions from anon;
+revoke all on all tables in schema public from anon;
+alter default privileges in schema public revoke all on tables    from anon;
 alter default privileges in schema public revoke all on sequences from anon;
+
+-- Functions are EXECUTE-able by PUBLIC by default, which would quietly include
+-- anon. Default-deny instead; every callable function is granted explicitly.
+alter default privileges in schema public revoke all on functions from public, anon;
 
 -- ---------------------------------------------------------------------------
 -- Enums
 -- ---------------------------------------------------------------------------
-create type public.member_role      as enum ('member', 'organizer');
-create type public.trip_status      as enum ('planning', 'upcoming', 'active', 'archived');
-create type public.rsvp_status      as enum ('yes', 'no', 'maybe', 'pending');
-create type public.meal_type        as enum ('breakfast', 'lunch', 'dinner', 'snack');
-create type public.event_kind       as enum ('activity', 'travel', 'birthday', 'reminder', 'chore', 'other');
-create type public.expense_category as enum ('house', 'golf_cart', 'groceries', 'dining', 'activities', 'travel', 'supplies', 'fuel', 'other');
-create type public.split_method     as enum ('equal', 'custom', 'household');
-create type public.photo_kind       as enum ('trip', 'house', 'journal');
+do $$
+begin
+  create type public.member_role as enum ('member', 'organizer');
+exception when duplicate_object then null;
+end $$;
+
+do $$
+begin
+  create type public.trip_status as enum ('planning', 'upcoming', 'active', 'archived');
+exception when duplicate_object then null;
+end $$;
+
+do $$
+begin
+  create type public.rsvp_status as enum ('yes', 'no', 'maybe', 'pending');
+exception when duplicate_object then null;
+end $$;
+
+do $$
+begin
+  create type public.meal_type as enum ('breakfast', 'lunch', 'dinner', 'snack');
+exception when duplicate_object then null;
+end $$;
+
+do $$
+begin
+  create type public.event_kind as enum ('activity', 'travel', 'birthday', 'reminder', 'chore', 'other');
+exception when duplicate_object then null;
+end $$;
+
+do $$
+begin
+  create type public.expense_category as enum ('house', 'golf_cart', 'groceries', 'dining', 'activities', 'travel', 'supplies', 'fuel', 'other');
+exception when duplicate_object then null;
+end $$;
+
+do $$
+begin
+  create type public.split_method as enum ('equal', 'custom', 'household');
+exception when duplicate_object then null;
+end $$;
+
+do $$
+begin
+  create type public.photo_kind as enum ('trip', 'house', 'journal');
+exception when duplicate_object then null;
+end $$;
 
 -- ---------------------------------------------------------------------------
 -- Keep-alive. Free Supabase projects pause after 7 days of no activity, and
 -- this app is idle ~51 weeks a year. A weekly GitHub Action calls ping() to
--- reset that timer. It writes a single row, so it counts as real activity —
--- a read against an empty table might not.
+-- reset that timer. It writes a row, so it counts as genuine activity.
 -- ---------------------------------------------------------------------------
-create table public.heartbeat (
+create table if not exists public.heartbeat (
   id        boolean primary key default true check (id),
   last_ping timestamptz not null default now()
 );
-insert into public.heartbeat (id) values (true) on conflict do nothing;
+
+insert into public.heartbeat (id) values (true) on conflict (id) do nothing;
 
 alter table public.heartbeat enable row level security;
--- No policies: nobody reads this through the API. ping() is the only door,
--- and it is SECURITY DEFINER so it bypasses the (empty) policy set.
+-- Deliberately no policies: nobody reaches this through the REST API. ping()
+-- is the only door, and it is SECURITY DEFINER so policies don't apply to it.
 
 create or replace function public.ping()
 returns timestamptz
@@ -58,8 +104,8 @@ as $$
   update public.heartbeat set last_ping = now() where id returning last_ping;
 $$;
 
--- Callable without a session, because the cron job has no user to sign in as.
--- Worst case abuse is bumping one timestamp.
+-- Callable without a session: the cron job has no user to sign in as. The
+-- worst it can do is bump one timestamp.
 grant execute on function public.ping() to anon, authenticated;
 
 -- ======================== 01_identity.sql ========================
@@ -68,29 +114,40 @@ grant execute on function public.ping() to anon, authenticated;
 -- 01_identity.sql — households, the invite allowlist, and profiles.
 --
 -- Ordering matters: households <- profiles <- allowed_emails, so every foreign
--- key can be declared inline without a second ALTER pass.
+-- key can be declared inline.
+--
+-- WHY THERE IS NO TRIGGER ON auth.users
+--
+-- The usual Supabase pattern hangs an AFTER INSERT trigger on auth.users to
+-- mirror each new account into `profiles`. That is no longer possible: the
+-- `postgres` role does not own auth.users, so CREATE TRIGGER on it fails with
+--   ERROR 42501: must be owner of relation users
+-- and because the SQL editor runs a script in one transaction, that single
+-- failure silently rolls back every table in the file.
+--
+-- Instead the client calls ensure_profile() right after sign-in. Supabase now
+-- recommends this direction anyway, and it has a real advantage: it re-syncs
+-- is_active on every call, so adding someone to the allowlist and having them
+-- press "Check again" is enough to let them in.
 -- ===========================================================================
 
 -- ---------------------------------------------------------------------------
 -- Households. The unit that cooks a dinner and takes a share of the house cost.
 -- ---------------------------------------------------------------------------
-create table public.households (
+create table if not exists public.households (
   id         uuid primary key default gen_random_uuid(),
   name       text not null check (length(btrim(name)) between 1 and 80),
-  color      text not null default '#1f8f89'
-               check (color ~* '^#[0-9a-f]{6}$'),  -- for calendar + map legends
+  color      text not null default '#1f8f89' check (color ~* '^#[0-9a-f]{6}$'),
   sort_order smallint not null default 0,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
 
 -- ---------------------------------------------------------------------------
--- Profiles. One row per login, created automatically by the trigger below.
---
--- `is_active` is the gate every RLS policy checks. It is derived from
--- `allowed_emails` and must never be writable by the user it describes.
+-- Profiles. `is_active` is the gate every RLS policy checks. It is derived
+-- from allowed_emails and must never be writable by the person it describes.
 -- ---------------------------------------------------------------------------
-create table public.profiles (
+create table if not exists public.profiles (
   id           uuid primary key references auth.users(id) on delete cascade,
   email        text not null unique check (email = lower(email)),
   full_name    text not null default '',
@@ -104,29 +161,33 @@ create table public.profiles (
   updated_at   timestamptz not null default now()
 );
 
-create index profiles_household_idx on public.profiles (household_id);
-create index profiles_active_idx    on public.profiles (is_active) where is_active;
+create index if not exists profiles_household_idx on public.profiles (household_id);
+create index if not exists profiles_active_idx    on public.profiles (is_active) where is_active;
 
 -- Column-level grants, and why they are not optional:
 -- RLS filters *rows*, not *columns*. A policy saying "you may update your own
--- profile" would otherwise let anyone set role='organizer' or is_active=true on
--- themselves. These grants are the only thing preventing that.
+-- profile" would otherwise let anyone set role='organizer' or is_active=true
+-- on themselves. These grants are the only thing preventing that.
 revoke all on public.profiles from authenticated;
 grant select on public.profiles to authenticated;
 grant update (full_name, avatar_path, household_id) on public.profiles to authenticated;
--- No INSERT: only the auth trigger creates profiles.
+-- No INSERT: only ensure_profile() creates rows, and it runs as the owner.
 -- No DELETE: removal cascades from auth.users.
 
 -- ---------------------------------------------------------------------------
 -- The invite allowlist. Source of truth for "is this person family?".
 -- ---------------------------------------------------------------------------
-create table public.allowed_emails (
+create table if not exists public.allowed_emails (
   email      text primary key
                check (email = lower(email) and position('@' in email) > 1),
   note       text,
   invited_by uuid references public.profiles(id) on delete set null,
   created_at timestamptz not null default now()
 );
+
+grant select, insert, update, delete on public.allowed_emails to authenticated;
+grant select, insert, update on public.households to authenticated;
+grant delete on public.households to authenticated;
 
 -- ---------------------------------------------------------------------------
 -- updated_at maintenance
@@ -142,74 +203,56 @@ begin
 end;
 $$;
 
+drop trigger if exists households_touch on public.households;
 create trigger households_touch before update on public.households
   for each row execute function public.touch_updated_at();
+
+drop trigger if exists profiles_touch on public.profiles;
 create trigger profiles_touch before update on public.profiles
   for each row execute function public.touch_updated_at();
 
 -- ---------------------------------------------------------------------------
--- Populating profiles from auth.users
+-- ensure_profile() — called by the app immediately after sign-in.
+--
+-- SECURITY DEFINER so it can write columns the caller is not granted, and so
+-- it bypasses the profiles policies while creating the very row those policies
+-- depend on.
 -- ---------------------------------------------------------------------------
-create or replace function public.handle_new_user()
-returns trigger
+create or replace function public.ensure_profile()
+returns void
 language plpgsql
 security definer
 set search_path = ''
 as $$
 declare
-  v_email text := lower(new.email);
+  v_id     uuid := (select auth.uid());
+  v_email  text := lower(nullif((select auth.jwt() ->> 'email'), ''));
+  v_active boolean;
 begin
-  insert into public.profiles (id, email, full_name, is_active)
-  values (
-    new.id,
-    v_email,
-    coalesce(nullif(btrim(new.raw_user_meta_data ->> 'full_name'), ''), ''),
-    exists (select 1 from public.allowed_emails a where a.email = v_email)
-  )
-  on conflict (id) do update set email = excluded.email;
-  return new;
-exception when others then
-  -- Never abort signup with an opaque "Database error saving new user". A
-  -- profile we failed to create can be repaired; a login nobody can complete
-  -- is a support call in the middle of vacation week.
-  raise warning 'handle_new_user failed for %: %', new.id, sqlerrm;
-  return new;
+  if v_id is null or v_email is null then
+    raise exception 'Not signed in' using errcode = '42501';
+  end if;
+
+  v_active := exists (select 1 from public.allowed_emails a where a.email = v_email);
+
+  insert into public.profiles (id, email, is_active)
+  values (v_id, v_email, v_active)
+  on conflict (id) do update
+     set email     = excluded.email,
+         is_active = excluded.is_active;
 end;
 $$;
 
-create trigger on_auth_user_created
-  after insert on auth.users
-  for each row execute function public.handle_new_user();
-
--- Keep the profile in step if the address changes in Auth.
-create or replace function public.handle_user_email_change()
-returns trigger
-language plpgsql
-security definer
-set search_path = ''
-as $$
-begin
-  update public.profiles
-     set email     = lower(new.email),
-         is_active = exists (
-           select 1 from public.allowed_emails a where a.email = lower(new.email)
-         )
-   where id = new.id;
-  return new;
-end;
-$$;
-
-create trigger on_auth_user_email_changed
-  after update of email on auth.users
-  for each row when (old.email is distinct from new.email)
-  execute function public.handle_user_email_change();
+revoke execute on function public.ensure_profile() from public, anon;
+grant   execute on function public.ensure_profile() to authenticated;
 
 -- ---------------------------------------------------------------------------
 -- Allowlist changes take effect immediately, in both directions.
 --
--- Deriving is_active from the allowlist (rather than reading the allowlist in
--- every policy) means revoking someone applies on their very next query — no
--- waiting for a token to expire.
+-- This trigger is on our own table, so it is allowed — unlike one on
+-- auth.users. Deriving is_active here (rather than reading the allowlist in
+-- every policy) means revoking someone applies on their very next query, with
+-- no waiting for a token to expire.
 -- ---------------------------------------------------------------------------
 create or replace function public.sync_allowed_email()
 returns trigger
@@ -228,6 +271,7 @@ begin
 end;
 $$;
 
+drop trigger if exists allowed_emails_sync on public.allowed_emails;
 create trigger allowed_emails_sync
   after insert or delete on public.allowed_emails
   for each row execute function public.sync_allowed_email();
@@ -366,12 +410,14 @@ alter table public.allowed_emails enable row level security;
 -- ---------------------------------------------------------------------------
 -- profiles
 -- ---------------------------------------------------------------------------
+drop policy if exists profiles_select on public.profiles;
 create policy profiles_select on public.profiles
   for select to authenticated
   using ( (select public.is_member()) or id = (select auth.uid()) );
   -- The OR lets a signed-in but not-yet-approved person load their own row, so
   -- they see "your account is pending" instead of an empty screen.
 
+drop policy if exists profiles_update_self on public.profiles;
 create policy profiles_update_self on public.profiles
   for update to authenticated
   using      ( id = (select auth.uid()) )
@@ -382,23 +428,28 @@ create policy profiles_update_self on public.profiles
 -- ---------------------------------------------------------------------------
 -- households — any member may create and rename; only organizers delete.
 -- ---------------------------------------------------------------------------
+drop policy if exists households_select on public.households;
 create policy households_select on public.households
   for select to authenticated using ( (select public.is_member()) );
 
+drop policy if exists households_insert on public.households;
 create policy households_insert on public.households
   for insert to authenticated with check ( (select public.is_member()) );
 
+drop policy if exists households_update on public.households;
 create policy households_update on public.households
   for update to authenticated
   using      ( (select public.is_member()) )
   with check ( (select public.is_member()) );
 
+drop policy if exists households_delete on public.households;
 create policy households_delete on public.households
   for delete to authenticated using ( (select public.is_organizer()) );
 
 -- ---------------------------------------------------------------------------
 -- allowed_emails — organizers only. This list is who can enter the app at all.
 -- ---------------------------------------------------------------------------
+drop policy if exists allowed_emails_all on public.allowed_emails;
 create policy allowed_emails_all on public.allowed_emails
   for all to authenticated
   using      ( (select public.is_organizer()) )
@@ -411,7 +462,7 @@ create policy allowed_emails_all on public.allowed_emails
 -- about on arrival day.
 -- ===========================================================================
 
-create table public.trips (
+create table if not exists public.trips (
   id         uuid primary key default gen_random_uuid(),
   year       integer not null unique check (year between 2000 and 2100),
   name       text not null default '',
@@ -426,9 +477,9 @@ create table public.trips (
     check (end_date is null or start_date is null or end_date >= start_date)
 );
 
-create index trips_year_desc_idx on public.trips (year desc);
+create index if not exists trips_year_desc_idx on public.trips (year desc);
 
-create table public.houses (
+create table if not exists public.houses (
   id              uuid primary key default gen_random_uuid(),
   trip_id         uuid not null references public.trips(id) on delete cascade,
   name            text not null default '',
@@ -452,12 +503,12 @@ create table public.houses (
   constraint houses_latlng_together check ((lat is null) = (lng is null))
 );
 
-create index houses_trip_idx   on public.houses (trip_id);
-create index houses_latlng_idx on public.houses (lat, lng) where lat is not null;
+create index if not exists houses_trip_idx   on public.houses (trip_id);
+create index if not exists houses_latlng_idx on public.houses (lat, lng) where lat is not null;
 
 -- Gate code, pool code, wifi, trash day. Free-form label/value so a new house
 -- with a quirk ("outdoor shower key") needs no migration.
-create table public.house_info (
+create table if not exists public.house_info (
   id         uuid primary key default gen_random_uuid(),
   house_id   uuid not null references public.houses(id) on delete cascade,
   label      text not null check (length(btrim(label)) between 1 and 60),
@@ -469,14 +520,23 @@ create table public.house_info (
   unique (house_id, label)
 );
 
-create index house_info_house_idx on public.house_info (house_id, sort_order);
+create index if not exists house_info_house_idx on public.house_info (house_id, sort_order);
 
+drop trigger if exists trips_touch on public.trips;
 create trigger trips_touch before update on public.trips
   for each row execute function public.touch_updated_at();
+drop trigger if exists houses_touch on public.houses;
 create trigger houses_touch before update on public.houses
   for each row execute function public.touch_updated_at();
+drop trigger if exists house_info_touch on public.house_info;
 create trigger house_info_touch before update on public.house_info
   for each row execute function public.touch_updated_at();
+
+-- Table-level grants. 00_prelude changes the schema's default privileges, so
+-- state these explicitly rather than relying on what a new table inherits.
+grant select, insert, update, delete on public.trips      to authenticated;
+grant select, insert, update, delete on public.houses     to authenticated;
+grant select, insert, update, delete on public.house_info to authenticated;
 
 -- ======================== 07_trips_rls.sql ========================
 
@@ -493,23 +553,43 @@ alter table public.trips      enable row level security;
 alter table public.houses     enable row level security;
 alter table public.house_info enable row level security;
 
+drop policy if exists trips_select on public.trips;
 create policy trips_select on public.trips
   for select to authenticated using ( (select public.is_member()) );
+drop policy if exists trips_write on public.trips;
 create policy trips_write on public.trips
   for all to authenticated
   using      ( (select public.is_organizer()) )
   with check ( (select public.is_organizer()) );
 
+drop policy if exists houses_select on public.houses;
 create policy houses_select on public.houses
   for select to authenticated using ( (select public.is_member()) );
+drop policy if exists houses_write on public.houses;
 create policy houses_write on public.houses
   for all to authenticated
   using      ( (select public.is_organizer()) )
   with check ( (select public.is_organizer()) );
 
+drop policy if exists house_info_select on public.house_info;
 create policy house_info_select on public.house_info
   for select to authenticated using ( (select public.is_member()) );
+drop policy if exists house_info_write on public.house_info;
 create policy house_info_write on public.house_info
   for all to authenticated
   using      ( (select public.is_member()) )
   with check ( (select public.is_member()) );
+
+-- ======================== 99_bootstrap_local.sql ========================
+
+-- Local-only bootstrap. Gitignored: contains a real email address and this
+-- repository is public. Adds the first organizer so there is someone who can
+-- manage the invite list from inside the app.
+insert into public.allowed_emails (email, note)
+values ('you@example.com', 'organizer - bootstrap')
+on conflict (email) do nothing;
+
+-- Promote to organizer. Runs whether or not the profile exists yet; if the
+-- account is created later, ensure_profile() picks up is_active and this can
+-- be re-run.
+update public.profiles set role = 'organizer' where email = 'you@example.com';
