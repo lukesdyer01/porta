@@ -1,0 +1,17 @@
+-- ===========================================================================
+-- 05_bootstrap.sql.example — run ONCE, by hand, with your own email.
+--
+-- Copy this to 05_bootstrap.sql, replace the address, and run it BEFORE your
+-- first sign-in. Then sign in, and run the UPDATE at the bottom to make
+-- yourself an organizer.
+--
+-- Kept out of the committed migrations because it contains a real email
+-- address and this repository is public.
+-- ===========================================================================
+
+insert into public.allowed_emails (email, note)
+values ('you@example.com', 'organizer - bootstrap')
+on conflict (email) do nothing;
+
+-- After signing in once, promote yourself:
+-- update public.profiles set role = 'organizer' where email = 'you@example.com';

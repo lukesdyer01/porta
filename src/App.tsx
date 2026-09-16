@@ -1,25 +1,52 @@
-const YEAR = new Date().getFullYear()
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { HashRouter, Route, Routes } from 'react-router-dom'
+import { AuthProvider } from './auth/AuthProvider'
+import { useAuth } from './auth/useAuth'
+import SignIn from './auth/SignIn'
+import AppShell from './components/AppShell'
+import Spinner from './components/Spinner'
+import { isConfigured } from './lib/supabase'
+import Home from './pages/Home'
+import NotConfigured from './pages/NotConfigured'
+import Pending from './pages/Pending'
+import Profile from './pages/Profile'
+
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: { staleTime: 30_000, refetchOnWindowFocus: true, retry: 1 },
+  },
+})
+
+function Gate() {
+  const { session, loading, pending } = useAuth()
+
+  if (loading) return <Spinner />
+  if (!session) return <SignIn />
+  if (pending) return <Pending />
+
+  return (
+    <Routes>
+      <Route element={<AppShell />}>
+        <Route index element={<Home />} />
+        <Route path="profile" element={<Profile />} />
+        <Route path="*" element={<Home />} />
+      </Route>
+    </Routes>
+  )
+}
 
 export default function App() {
-  return (
-    <main className="mx-auto flex min-h-dvh max-w-2xl flex-col justify-center px-6 py-16">
-      <p className="font-display text-[color:var(--text-muted)] text-sm tracking-[0.2em] uppercase">
-        Port Aransas &middot; {YEAR}
-      </p>
-      <h1 className="font-display mt-3 text-4xl leading-tight font-semibold text-balance sm:text-5xl">
-        King Family Beach Week
-      </h1>
-      <p className="mt-4 max-w-prose text-[color:var(--text-muted)] leading-relaxed">
-        The house, the codes, who&rsquo;s coming, who&rsquo;s cooking, and what everyone owes &mdash;
-        every year, in one place.
-      </p>
+  if (!isConfigured) return <NotConfigured />
 
-      <div className="mt-10 rounded-xl border border-[color:var(--border)] bg-[color:var(--surface-raised)] p-5">
-        <p className="text-sm font-medium">Setting things up</p>
-        <p className="mt-1 text-sm text-[color:var(--text-muted)] leading-relaxed">
-          The site is deploying correctly. Sign-in and the {YEAR} trip come next.
-        </p>
-      </div>
-    </main>
+  return (
+    <QueryClientProvider client={queryClient}>
+      <AuthProvider>
+        {/* Hash routing: GitHub Pages serves a 404 for any path it has no file
+            for, which would break every deep link on a normal router. */}
+        <HashRouter>
+          <Gate />
+        </HashRouter>
+      </AuthProvider>
+    </QueryClientProvider>
   )
 }
