@@ -24,29 +24,28 @@ Supabase CLI:
 
 ## Still to do
 
-### Send sign-in emails through Resend
+### Send sign-in emails through Resend — required, not optional
 
-Supabase's built-in sender is development-only and throttled to a couple of messages per
-hour across the whole project. It's fine for testing alone; it will fail the week twelve
-people sign in.
+Two reasons, and the second is a hard blocker:
+
+1. Supabase's built-in sender is throttled to a couple of messages per hour across the
+   whole project. Fine for testing alone; it fails the week twelve people sign in.
+2. **Free projects on the default mail provider cannot customise email templates.** The
+   stock template contains only a link, never the 6-digit code. So the code-based sign-in
+   can't work until custom SMTP is on. The templates are already written
+   (`supabase/templates/`) and configured in `config.toml` — they apply the moment SMTP is
+   enabled and you run `supabase config push`.
+
+Until then, sign in by tapping the link in the email, in the same browser you requested it
+from.
 
 1. Sign up at [resend.com](https://resend.com) — free tier is 3,000/month.
 2. Verify a sending domain (or start with their test sender).
 3. Supabase dashboard → **Project Settings → Authentication → SMTP Settings**:
    - Host `smtp.resend.com`, port `465`, username `resend`, password = your Resend API key
    - Set sender name and address
-4. Re-run `supabase config push` so the 60/hour rate limit applies.
-
-### Put the code in the email
-
-**Authentication → Emails → Magic Link.** The default template only shows a link. The code
-is the primary path, so it needs to be prominent:
-
-```html
-<h2>Your sign-in code</h2>
-<p style="font-size:28px;letter-spacing:6px;font-weight:600">{{ .Token }}</p>
-<p>Enter this on the beach week site. It expires in an hour.</p>
-```
+4. Re-run `supabase config push`. This applies the email templates **and** the 60/hour
+   rate limit, both of which are currently blocked by the free default provider.
 
 ## Inviting the rest of the family
 

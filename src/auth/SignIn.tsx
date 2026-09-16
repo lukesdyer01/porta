@@ -123,6 +123,10 @@ export default function SignIn() {
               Sent to <span className="text-[color:var(--text)]">{email}</span>. It works on any
               device, so you can check email on your phone and type it here.
             </p>
+            <p className="mt-2 text-sm text-[color:var(--text-muted)]">
+              No code in the email? Tap the sign-in link in it instead &mdash; that works too,
+              as long as you open it in this browser.
+            </p>
             <input
               id="code"
               ref={codeRef}

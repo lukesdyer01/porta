@@ -1,0 +1,32 @@
+<!doctype html>
+<html>
+  <body style="margin:0;padding:24px;background:#f8f1e5;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:#1c2b33">
+    <div style="max-width:440px;margin:0 auto;background:#ffffff;border-radius:16px;padding:32px">
+      <p style="margin:0;font-size:11px;letter-spacing:3px;text-transform:uppercase;color:#6b7b84">
+        Port Aransas
+      </p>
+      <h1 style="margin:6px 0 20px;font-size:22px;font-weight:600">King Family Beach Week</h1>
+
+      <p style="margin:0 0 8px;font-size:15px">Your sign-in code:</p>
+      <p style="margin:0 0 20px;font-size:34px;font-weight:700;letter-spacing:10px;color:#115856">
+        {{ .Token }}
+      </p>
+
+      <p style="margin:0 0 20px;font-size:14px;line-height:1.6;color:#3a4b55">
+        Type it into the site. It works on any device, so you can read this on your phone
+        and sign in on a laptop. It expires in an hour.
+      </p>
+
+      <p style="margin:0;font-size:13px;color:#6b7b84">
+        Or just
+        <a href="{{ .ConfirmationURL }}" style="color:#16706c">tap here to sign in</a>
+        on this device.
+      </p>
+
+      <hr style="border:none;border-top:1px solid #efe3cf;margin:24px 0" />
+      <p style="margin:0;font-size:12px;color:#6b7b84">
+        If you weren't expecting this, you can ignore it.
+      </p>
+    </div>
+  </body>
+</html>

@@ -244,6 +244,19 @@ otp_expiry = 3600
 # admin_email = "admin@email.com"
 # sender_name = "Admin"
 
+# The default templates only contain a link. The 6-digit code is the primary
+# sign-in path here — a link binds to the browser that requested it, so opening
+# the email on a phone after requesting on a laptop fails. Lead with the code.
+[auth.email.template.magic_link]
+subject = "Your beach week sign-in code"
+content_path = "./supabase/templates/magic_link.html"
+
+# New accounts get the confirmation template rather than magic_link, so it has
+# to carry the code too.
+[auth.email.template.confirmation]
+subject = "Your beach week sign-in code"
+content_path = "./supabase/templates/confirmation.html"
+
 # Uncomment to customize email template
 # [auth.email.template.invite]
 # subject = "You have been invited"
