@@ -1,0 +1,40 @@
+name: Keep Supabase awake
+
+# Free Supabase projects pause after 7 days with no database activity, and this
+# app is dormant ~51 weeks a year. A weekly write keeps the timer from running
+# out, so nobody ever opens the site to a cold, paused project.
+on:
+  schedule:
+    - cron: '17 9 * * 1' # Mondays, 09:17 UTC — an odd minute avoids the rush
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping the database
+        env:
+          SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+        run: |
+          if [ -z "$SUPABASE_URL" ] || [ -z "$SUPABASE_ANON_KEY" ]; then
+            echo "Supabase secrets not configured yet — skipping."
+            exit 0
+          fi
+
+          code=$(curl -sS -o /tmp/ping.txt -w '%{http_code}' -X POST \
+            "$SUPABASE_URL/rest/v1/rpc/ping" \
+            -H "apikey: $SUPABASE_ANON_KEY" \
+            -H "Authorization: Bearer $SUPABASE_ANON_KEY" \
+            -H 'Content-Type: application/json' \
+            -d '{}')
+
+          echo "HTTP $code"
+          cat /tmp/ping.txt
+
+          # A paused project answers 5xx, which is exactly what we must catch —
+          # a silent "success" on failure would defeat the point of this job.
+          if [ "$code" -ge 300 ]; then
+            echo "::error::Keep-alive ping failed with HTTP $code"
+            exit 1
+          fi

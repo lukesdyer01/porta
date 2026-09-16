@@ -1,0 +1,94 @@
+@import 'tailwindcss';
+
+/* ---------------------------------------------------------------------------
+   Port Aransas palette. Warm sand grounds, gulf teals, a sunset coral accent.
+   Deliberately not the default slate/blue — this should feel like a family
+   scrapbook, not a dashboard.
+--------------------------------------------------------------------------- */
+@theme {
+  --color-sand-50: #fdfaf5;
+  --color-sand-100: #f8f1e5;
+  --color-sand-200: #efe3cf;
+  --color-sand-300: #e2cfae;
+  --color-sand-400: #cdb188;
+
+  --color-gulf-50: #eefaf9;
+  --color-gulf-100: #d2f2ef;
+  --color-gulf-300: #6fcdc6;
+  --color-gulf-500: #1f8f89;
+  --color-gulf-600: #16706c;
+  --color-gulf-700: #115856;
+  --color-gulf-900: #0a3130;
+
+  --color-sunset-300: #f7b08a;
+  --color-sunset-500: #e8734a;
+  --color-sunset-600: #d15a32;
+
+  --color-ink-500: #6b7b84;
+  --color-ink-700: #3a4b55;
+  --color-ink-900: #1c2b33;
+
+  --font-display: 'Bitter', Georgia, 'Times New Roman', serif;
+  --font-sans: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+}
+
+/* Semantic tokens. Light is the base definition; dark only redefines. */
+:root {
+  --surface: var(--color-sand-50);
+  --surface-raised: #ffffff;
+  --surface-sunk: var(--color-sand-100);
+  --border: var(--color-sand-200);
+  --text: var(--color-ink-900);
+  --text-muted: var(--color-ink-500);
+  --accent: var(--color-gulf-600);
+  --accent-contrast: #ffffff;
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --surface: #0f1b21;
+    --surface-raised: #17262d;
+    --surface-sunk: #0a1419;
+    --border: #24383f;
+    --text: var(--color-sand-100);
+    --text-muted: #8fa3ad;
+    --accent: var(--color-gulf-300);
+    --accent-contrast: var(--color-gulf-900);
+    color-scheme: dark;
+  }
+}
+
+:root[data-theme='dark'] {
+  --surface: #0f1b21;
+  --surface-raised: #17262d;
+  --surface-sunk: #0a1419;
+  --border: #24383f;
+  --text: var(--color-sand-100);
+  --text-muted: #8fa3ad;
+  --accent: var(--color-gulf-300);
+  --accent-contrast: var(--color-gulf-900);
+  color-scheme: dark;
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--surface);
+  color: var(--text);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  /* Respect the iPhone notch/home indicator — this lives on a phone at the beach. */
+  padding: env(safe-area-inset-top) env(safe-area-inset-right)
+    env(safe-area-inset-bottom) env(safe-area-inset-left);
+}
+
+/* Don't let a stray wide table or map scroll the whole page sideways. */
+body {
+  overflow-x: hidden;
+}
