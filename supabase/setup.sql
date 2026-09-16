@@ -579,4 +579,112 @@ create policy house_info_write on public.house_info
   for all to authenticated
   using      ( (select public.is_member()) )
   with check ( (select public.is_member()) );
+
+-- ======================== 08_invite_codes.sql ========================
+
+-- ===========================================================================
+-- 08_invite_codes.sql — self-serve signup with a shared family code.
+--
+-- The email allowlist alone means the organizer must add all dozen people
+-- before anyone can get in. A shared code removes that, without giving up
+-- per-person control: a valid code writes the new address into
+-- allowed_emails, so revoking one person stays a one-row delete and there is
+-- a record of who joined with which code.
+--
+-- The code is NOT the family surname. The page it guards is titled "King
+-- Family Beach Week", so a surname would be printed on the thing it protects.
+-- ===========================================================================
+
+create table if not exists public.invite_codes (
+  code       text primary key
+               check (code = lower(code) and length(code) between 4 and 64),
+  label      text,
+  active     boolean not null default true,
+  expires_at timestamptz,
+  max_uses   integer check (max_uses is null or max_uses > 0),
+  uses       integer not null default 0,
+  created_by uuid references public.profiles(id) on delete set null,
+  created_at timestamptz not null default now()
+);
+
+grant select, insert, update, delete on public.invite_codes to authenticated;
+
+alter table public.invite_codes enable row level security;
+
+-- Organizers only. Members have no reason to read the codes out of the API.
+drop policy if exists invite_codes_all on public.invite_codes;
+create policy invite_codes_all on public.invite_codes
+  for all to authenticated
+  using      ( (select public.is_organizer()) )
+  with check ( (select public.is_organizer()) );
+
+-- ---------------------------------------------------------------------------
+-- The signup gate.
+--
+-- VOLATILE, not STABLE: it writes. It bumps the use counter and records the
+-- new member. Marking it stable would make those writes fail.
+-- ---------------------------------------------------------------------------
+create or replace function public.hook_restrict_signup(event jsonb)
+returns jsonb
+language plpgsql
+volatile
+security definer
+set search_path = ''
+as $$
+declare
+  v_email text := lower(btrim(coalesce(event -> 'user' ->> 'email', '')));
+  -- The Before User Created payload exposes this as `user_metadata`; the
+  -- column it eventually lands in is raw_user_meta_data, which is the wrong
+  -- name to read here. Verified against a real hook payload.
+  v_code  text := lower(btrim(coalesce(
+                    event -> 'user' -> 'user_metadata' ->> 'invite_code', '')));
+begin
+  if v_email = '' then
+    return jsonb_build_object('error', jsonb_build_object(
+      'http_code', 400,
+      'message',   'We need an email address to sign you in.'));
+  end if;
+
+  -- Already invited by address (added by an organizer, or by a previous code
+  -- signup): nothing further to check.
+  if exists (select 1 from public.allowed_emails a where a.email = v_email) then
+    return '{}'::jsonb;
+  end if;
+
+  if v_code = '' then
+    -- The client watches for this exact marker to reveal the code field, so
+    -- returning members never have to see it.
+    return jsonb_build_object('error', jsonb_build_object(
+      'http_code', 403,
+      'message',   'NEEDS_CODE: Enter the family code to join. Ask Luke if you do not have it.'));
+  end if;
+
+  -- One statement does validity, expiry, the use cap and the increment, so two
+  -- people redeeming the last use at once cannot both succeed.
+  update public.invite_codes
+     set uses = uses + 1
+   where code = v_code
+     and active
+     and (expires_at is null or expires_at > now())
+     and (max_uses is null or uses < max_uses);
+
+  if not found then
+    return jsonb_build_object('error', jsonb_build_object(
+      'http_code', 403,
+      'message',   'That family code is not right. Check with Luke.'));
+  end if;
+
+  -- Record them, so the organizer keeps a per-person list to revoke from.
+  insert into public.allowed_emails (email, note)
+  values (v_email, 'joined with code: ' || v_code)
+  on conflict (email) do nothing;
+
+  return '{}'::jsonb;
+end;
+$$;
+
+grant  execute on function public.hook_restrict_signup(jsonb) to supabase_auth_admin;
+revoke execute on function public.hook_restrict_signup(jsonb) from authenticated, anon, public;
 -- (skipped 99_bootstrap_local.sql — local bootstrap, not shared)
+-- (skipped 991_invite_code_local.sql — local bootstrap, not shared)
+-- (skipped 994_cleanup_local.sql — local bootstrap, not shared)

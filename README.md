@@ -23,8 +23,10 @@ security**, with no server to catch a mistake. Two consequences:
 
 1. No codes, addresses, passwords, or personal details belong in this repo. They live in
    the database, behind a login.
-2. Sign-up is invite-only via an email allowlist. Because any signed-in family member can
-   read the house's gate and wifi codes, **who can sign up _is_ the security boundary**.
+2. Sign-up needs a shared family code, which auto-adds the new address to a per-person
+   allowlist so access stays individually revocable. **Who can sign up _is_ the security
+   boundary**, so the code is not the family surname — that would be printed on the page
+   it guards. House access codes sit behind an RSVP for the year on top of that.
 
 ## Local development
 
