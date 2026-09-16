@@ -34,6 +34,10 @@ cp .env.example .env.local   # then fill in your Supabase project values
 npm run dev
 ```
 
+## Setup
+
+First-time setup lives in [docs/SETUP.md](docs/SETUP.md).
+
 ## Database
 
 Migrations live in `supabase/migrations/`, numbered and applied in order. Apply them by
