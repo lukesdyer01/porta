@@ -44,7 +44,15 @@ export default function SignIn() {
     setBusy(true)
     setError(null)
 
-    const { error } = await supabase.auth.signInWithOtp({ email: address })
+    const { error } = await supabase.auth.signInWithOtp({
+      email: address,
+      options: {
+        // Send people back to THIS page. Relying on the project's Site URL
+        // instead means a stale value there drops the /porta/ path and lands
+        // them on a GitHub 404.
+        emailRedirectTo: window.location.href.split('#')[0],
+      },
+    })
     setBusy(false)
 
     if (error) {
