@@ -1,28 +1,49 @@
 import { useEffect, useRef, useState } from 'react'
 import { supabase } from '../lib/supabase'
 
-type Step = 'email' | 'code'
+type Step = 'email' | 'sent'
 
 /** Supabase phrases these for developers; the family needs plainer words. */
 function humanize(message: string): string {
   const m = message.toLowerCase()
   if (m.includes('invite-only') || m.includes('not allowed') || m.includes('403'))
-    return "That email isn't on the family list yet. Ask Luke to add it."
-  if (m.includes('rate limit') || m.includes('too many'))
-    return 'Too many attempts just now. Wait a minute and try again.'
-  if (m.includes('expired'))
-    return 'That code has expired. Send a new one.'
+    return "That email isn't on the family list. Ask Luke to add it."
+  if (m.includes('rate limit') || m.includes('too many') || m.includes('after'))
+    return 'Too many tries just now. Wait a minute and try again.'
+  if (m.includes('expired') || m.includes('invalid or has expired'))
+    return 'That link has expired. Send a new one below.'
   if (m.includes('invalid') || m.includes('token'))
-    return "That code didn't match. Check the digits and try again."
+    return "That didn't work. Send yourself a new link below."
   return message
 }
+
+/**
+ * A failed link lands back here with the reason in the URL fragment. Without
+ * reading it, an expired link just silently redisplays this form and the
+ * person has no idea what went wrong.
+ */
+function errorFromUrl(): string | null {
+  const hash = window.location.hash
+  const at = hash.indexOf('error')
+  if (at === -1) return null
+  const params = new URLSearchParams(hash.slice(hash.indexOf('#') + 1).replace(/^\/?\??/, ''))
+  const desc = params.get('error_description') ?? params.get('error')
+  if (!desc) return null
+  history.replaceState(null, '', window.location.pathname + window.location.search)
+  return humanize(desc.replace(/\+/g, ' '))
+}
+
+// Read once at page load, not in an effect: the fragment is consumed and
+// cleared immediately, and this must not re-run on re-render.
+const initialUrlError = errorFromUrl()
 
 export default function SignIn() {
   const [step, setStep] = useState<Step>('email')
   const [email, setEmail] = useState('')
   const [code, setCode] = useState('')
+  const [showCode, setShowCode] = useState(false)
   const [busy, setBusy] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(initialUrlError)
   const [cooldown, setCooldown] = useState(0)
   const codeRef = useRef<HTMLInputElement>(null)
 
@@ -33,17 +54,16 @@ export default function SignIn() {
   }, [cooldown])
 
   useEffect(() => {
-    if (step === 'code') codeRef.current?.focus()
-  }, [step])
+    if (showCode) codeRef.current?.focus()
+  }, [showCode])
 
-  async function sendCode(e?: React.FormEvent) {
+  async function send(e?: React.FormEvent) {
     e?.preventDefault()
     const address = email.trim().toLowerCase()
     if (!address) return
 
     setBusy(true)
     setError(null)
-
     const { error } = await supabase.auth.signInWithOtp({
       email: address,
       options: {
@@ -60,7 +80,7 @@ export default function SignIn() {
       return
     }
     setEmail(address)
-    setStep('code')
+    setStep('sent')
     setCooldown(60)
   }
 
@@ -71,8 +91,6 @@ export default function SignIn() {
 
     setBusy(true)
     setError(null)
-    // No redirect, no session handoff between devices — this is why the code is
-    // the primary path rather than the emailed link.
     const { error } = await supabase.auth.verifyOtp({ email, token, type: 'email' })
     setBusy(false)
 
@@ -81,13 +99,18 @@ export default function SignIn() {
       setCode('')
       codeRef.current?.focus()
     }
-    // On success the auth listener in AuthProvider swaps the screen out.
+    // On success the listener in AuthProvider swaps this screen out.
   }
+
+  const field =
+    'w-full rounded-lg border border-[color:var(--border)] bg-[color:var(--surface)] px-3 py-2.5 text-base outline-none focus:border-[color:var(--accent)] focus:ring-2 focus:ring-[color:var(--accent)]/25'
+  const primary =
+    'w-full rounded-lg bg-[color:var(--accent)] px-4 py-2.5 font-medium text-[color:var(--accent-contrast)] transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50'
 
   return (
     <main className="mx-auto flex min-h-dvh w-full max-w-md flex-col justify-center px-6 py-12">
       <header className="mb-8">
-        <p className="text-[color:var(--text-muted)] text-xs font-medium tracking-[0.2em] uppercase">
+        <p className="text-xs font-medium tracking-[0.2em] text-[color:var(--text-muted)] uppercase">
           Port Aransas
         </p>
         <h1 className="font-display mt-2 text-3xl leading-tight font-semibold">
@@ -97,12 +120,12 @@ export default function SignIn() {
 
       <div className="rounded-2xl border border-[color:var(--border)] bg-[color:var(--surface-raised)] p-6 shadow-sm">
         {step === 'email' ? (
-          <form onSubmit={sendCode} noValidate>
+          <form onSubmit={send} noValidate>
             <label htmlFor="email" className="block text-sm font-medium">
               Your email address
             </label>
             <p className="mt-1 text-sm text-[color:var(--text-muted)]">
-              We&rsquo;ll send you a 6-digit sign-in code.
+              We&rsquo;ll email you a link that signs you straight in.
             </p>
             <input
               id="email"
@@ -113,55 +136,28 @@ export default function SignIn() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="you@example.com"
-              className="mt-3 w-full rounded-lg border border-[color:var(--border)] bg-[color:var(--surface)] px-3 py-2.5 text-base outline-none focus:border-[color:var(--accent)] focus:ring-2 focus:ring-[color:var(--accent)]/25"
+              className={`mt-3 ${field}`}
             />
-
-            <button
-              type="submit"
-              disabled={busy || !email.trim()}
-              className="mt-4 w-full rounded-lg bg-[color:var(--accent)] px-4 py-2.5 font-medium text-[color:var(--accent-contrast)] transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {busy ? 'Sending…' : 'Send code'}
+            <button type="submit" disabled={busy || !email.trim()} className={`mt-4 ${primary}`}>
+              {busy ? 'Sending…' : 'Email me a sign-in link'}
             </button>
           </form>
         ) : (
-          <form onSubmit={verify} noValidate>
-            <label htmlFor="code" className="block text-sm font-medium">
-              Enter the code
-            </label>
-            <p className="mt-1 text-sm text-[color:var(--text-muted)]">
-              Sent to <span className="text-[color:var(--text)]">{email}</span>. It works on any
-              device, so you can check email on your phone and type it here.
+          <div>
+            <h2 className="font-display text-xl font-semibold">Check your email</h2>
+            <p className="mt-2 text-sm leading-relaxed text-[color:var(--text-muted)]">
+              We sent a sign-in link to{' '}
+              <span className="text-[color:var(--text)]">{email}</span>. Open it{' '}
+              <strong className="font-medium text-[color:var(--text)]">in this browser</strong> and
+              you&rsquo;re in.
             </p>
-            <p className="mt-2 text-sm text-[color:var(--text-muted)]">
-              No code in the email? Tap the sign-in link in it instead &mdash; that works too,
-              as long as you open it in this browser.
-            </p>
-            <input
-              id="code"
-              ref={codeRef}
-              type="text"
-              inputMode="numeric"
-              autoComplete="one-time-code"
-              maxLength={6}
-              value={code}
-              onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
-              placeholder="123456"
-              className="mt-3 w-full rounded-lg border border-[color:var(--border)] bg-[color:var(--surface)] px-3 py-2.5 text-center font-mono text-2xl tracking-[0.4em] outline-none focus:border-[color:var(--accent)] focus:ring-2 focus:ring-[color:var(--accent)]/25"
-            />
-            <button
-              type="submit"
-              disabled={busy || code.length < 6}
-              className="mt-4 w-full rounded-lg bg-[color:var(--accent)] px-4 py-2.5 font-medium text-[color:var(--accent-contrast)] transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {busy ? 'Checking…' : 'Sign in'}
-            </button>
 
-            <div className="mt-4 flex items-center justify-between text-sm">
+            <div className="mt-5 flex items-center justify-between text-sm">
               <button
                 type="button"
                 onClick={() => {
                   setStep('email')
+                  setShowCode(false)
                   setCode('')
                   setError(null)
                 }}
@@ -172,13 +168,47 @@ export default function SignIn() {
               <button
                 type="button"
                 disabled={cooldown > 0 || busy}
-                onClick={() => void sendCode()}
+                onClick={() => void send()}
                 className="text-[color:var(--accent)] underline underline-offset-4 disabled:text-[color:var(--text-muted)] disabled:no-underline"
               >
-                {cooldown > 0 ? `Resend in ${cooldown}s` : 'Resend code'}
+                {cooldown > 0 ? `Resend in ${cooldown}s` : 'Resend'}
               </button>
             </div>
-          </form>
+
+            {/* Kept out of the way: the emailed code only exists once custom
+                SMTP is configured, so leading with it would send most people
+                hunting for something that isn't there. */}
+            {showCode ? (
+              <form onSubmit={verify} className="mt-6 border-t border-[color:var(--border)] pt-5">
+                <label htmlFor="code" className="block text-sm font-medium">
+                  Six-digit code
+                </label>
+                <input
+                  id="code"
+                  ref={codeRef}
+                  type="text"
+                  inputMode="numeric"
+                  autoComplete="one-time-code"
+                  maxLength={6}
+                  value={code}
+                  onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                  placeholder="123456"
+                  className={`mt-2 text-center font-mono text-2xl tracking-[0.4em] ${field}`}
+                />
+                <button type="submit" disabled={busy || code.length < 6} className={`mt-3 ${primary}`}>
+                  {busy ? 'Checking…' : 'Sign in with code'}
+                </button>
+              </form>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setShowCode(true)}
+                className="mt-5 text-sm text-[color:var(--text-muted)] underline underline-offset-4 hover:text-[color:var(--text)]"
+              >
+                My email has a 6-digit code instead
+              </button>
+            )}
+          </div>
         )}
 
         {error && (
