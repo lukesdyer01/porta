@@ -2046,6 +2046,23 @@ alter table public.meals
 alter table public.meals
   add constraint meals_not_both_cook_and_out
   check (not (eat_out and household_id is not null));
+
+-- ======================== 28_photo_thumbs.sql ========================
+
+-- ===========================================================================
+-- 28_photo_thumbs.sql — a small copy for the grid.
+--
+-- The gallery downloaded full-size images to draw them as squares a couple of
+-- hundred pixels wide, so opening the page pulled megabytes to show thumbnails.
+-- Uploads now store a second, small file and the grid uses that; the lightbox
+-- still loads the full one.
+--
+-- Nullable on purpose: photos uploaded before this have no thumbnail and the
+-- grid falls back to the full image rather than showing nothing.
+-- ===========================================================================
+
+alter table public.photos
+  add column if not exists thumb_path text;
 -- (skipped 99_bootstrap_local.sql — local bootstrap, not shared)
 -- (skipped 994_cleanup_local.sql — local bootstrap, not shared)
 -- (skipped 995_seed_code_local.sql — local bootstrap, not shared)

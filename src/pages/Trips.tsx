@@ -48,7 +48,7 @@ function useTripCards(trips: Trip[]) {
 
       const { data: photos, error: pErr } = await supabase
         .from('photos')
-        .select('house_id, storage_path, sort_order')
+        .select('house_id, storage_path, thumb_path, sort_order')
         .in('house_id', houseIds)
         .order('sort_order')
       if (pErr) throw new Error(pErr.message)
@@ -56,7 +56,9 @@ function useTripCards(trips: Trip[]) {
       // Lowest sort_order wins; the query is ordered, so first seen is first.
       const firstPath = new Map<string, string>()
       for (const p of photos ?? []) {
-        if (p.house_id && !firstPath.has(p.house_id)) firstPath.set(p.house_id, p.storage_path)
+        // Prefer the small copy; older photos only have the full one.
+        if (p.house_id && !firstPath.has(p.house_id))
+          firstPath.set(p.house_id, p.thumb_path || p.storage_path)
       }
       const paths = [...firstPath.values()]
       if (paths.length === 0) return cards

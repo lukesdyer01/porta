@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ImagePlus, Trash2 } from 'lucide-react'
 import { useRef, useState } from 'react'
 import { useAuth } from '../auth/useAuth'
-import { prepareImage } from '../lib/images'
+import { prepareImagePair } from '../lib/images'
 import { supabase } from '../lib/supabase'
 import { humanizeError } from '../lib/errors'
 
@@ -11,6 +11,7 @@ const SIGN_TTL = 60 * 60
 interface PhotoRow {
   id: string
   storage_path: string
+  thumb_path: string | null
   width: number | null
   height: number | null
   uploaded_by: string
@@ -28,7 +29,7 @@ export default function HousePhoto({ houseId, tripId }: { houseId: string; tripI
     queryFn: async (): Promise<(PhotoRow & { url: string }) | null> => {
       const { data, error } = await supabase
         .from('photos')
-        .select('id, storage_path, width, height, uploaded_by')
+        .select('id, storage_path, thumb_path, width, height, uploaded_by')
         .eq('house_id', houseId)
         .order('sort_order')
         .limit(1)
@@ -48,34 +49,47 @@ export default function HousePhoto({ houseId, tripId }: { houseId: string; tripI
   const upload = useMutation({
     mutationFn: async (file: File) => {
       if (!profile) throw new Error('Not signed in.')
-      const img = await prepareImage(file)
-      const path = `trips/${tripId}/houses/${houseId}/${crypto.randomUUID()}.${img.ext}`
+      const { full, thumb } = await prepareImagePair(file)
+      const base = `trips/${tripId}/houses/${houseId}/${crypto.randomUUID()}`
+      const path = `${base}.${full.ext}`
 
       const { error: upErr } = await supabase.storage
         .from('photos')
-        .upload(path, img.blob, { contentType: img.type, upsert: false })
+        .upload(path, full.blob, { contentType: full.type, upsert: false })
       if (upErr) throw new Error(upErr.message)
+
+      let thumbPath: string | null = null
+      if (thumb) {
+        const tPath = `${base}.thumb.${thumb.ext}`
+        const { error: tErr } = await supabase.storage
+          .from('photos')
+          .upload(tPath, thumb.blob, { contentType: thumb.type })
+        if (!tErr) thumbPath = tPath
+      }
 
       const { error: rowErr } = await supabase.from('photos').insert({
         house_id: houseId,
         trip_id: tripId,
         kind: 'house',
         storage_path: path,
-        width: img.width,
-        height: img.height,
-        bytes: img.blob.size,
+        thumb_path: thumbPath,
+        width: full.width,
+        height: full.height,
+        bytes: full.blob.size,
         uploaded_by: profile.id,
       })
       if (rowErr) {
         // Don't strand a file nothing points at.
-        await supabase.storage.from('photos').remove([path])
+        await supabase.storage.from('photos').remove([path, ...(thumbPath ? [thumbPath] : [])])
         throw new Error(rowErr.message)
       }
 
       // One photo per house for now: drop whatever it replaced.
       if (photo) {
         await supabase.from('photos').delete().eq('id', photo.id)
-        await supabase.storage.from('photos').remove([photo.storage_path])
+        await supabase.storage
+          .from('photos')
+          .remove([photo.storage_path, ...(photo.thumb_path ? [photo.thumb_path] : [])])
       }
     },
     onSuccess: () => {
@@ -91,7 +105,9 @@ export default function HousePhoto({ houseId, tripId }: { houseId: string; tripI
       if (!photo) return
       const { error } = await supabase.from('photos').delete().eq('id', photo.id)
       if (error) throw new Error(error.message)
-      await supabase.storage.from('photos').remove([photo.storage_path])
+      await supabase.storage
+        .from('photos')
+        .remove([photo.storage_path, ...(photo.thumb_path ? [photo.thumb_path] : [])])
     },
     onSuccess: () => void qc.invalidateQueries({ queryKey: ['house-photo', houseId] }),
     onError: (e: Error) => setError(humanizeError(e)),

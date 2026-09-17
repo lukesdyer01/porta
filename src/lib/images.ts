@@ -1,5 +1,7 @@
 const MAX_EDGE = 2000
+const THUMB_EDGE = 500
 const QUALITY = 0.82
+const THUMB_QUALITY = 0.7
 
 export interface Prepared {
   blob: Blob
@@ -9,26 +11,16 @@ export interface Prepared {
   type: string
 }
 
-/**
- * Downscale and re-encode in the browser before upload.
- *
- * There is no server to resize on, so a raw 5 MB phone photo would be
- * downloaded at full size by everyone, every time. `imageOrientation:
- * 'from-image'` applies the EXIF rotation, without which portrait photos from
- * a phone arrive sideways.
- *
- * HEIC is decoded by the OS on iOS Safari but not by Chrome or Firefox on
- * desktop. Rather than ship a multi-megabyte wasm decoder for that case, we
- * let the decode fail and say what to do — iOS already converts HEIC to JPEG
- * when you pick a file through Safari, so this mostly bites desktop users
- * dragging files out of Photos.
- */
-export async function prepareImage(file: File): Promise<Prepared> {
-  if (!file.type.startsWith('image/')) throw new Error('That file is not an image.')
+export interface PreparedPair {
+  full: Prepared
+  /** Small copy for grids. Null only if the browser refused to encode one. */
+  thumb: Prepared | null
+}
 
-  let bitmap: ImageBitmap
+async function decode(file: File): Promise<ImageBitmap> {
   try {
-    bitmap = await createImageBitmap(file, { imageOrientation: 'from-image' })
+    // Applies the EXIF rotation; without it portrait phone photos arrive sideways.
+    return await createImageBitmap(file, { imageOrientation: 'from-image' })
   } catch {
     const heic = /hei[cf]/i.test(file.type) || /\.hei[cf]$/i.test(file.name)
     throw new Error(
@@ -37,8 +29,22 @@ export async function prepareImage(file: File): Promise<Prepared> {
         : "Couldn't read that image. Try a JPEG or PNG.",
     )
   }
+}
 
-  const scale = Math.min(1, MAX_EDGE / Math.max(bitmap.width, bitmap.height))
+/**
+ * Re-encode at a bounded size.
+ *
+ * `toBlob` falls back to PNG when it cannot encode the type you asked for, and
+ * returns it WITHOUT complaining — Safari did exactly that for WebP, so phone
+ * photos were being stored as 5 MB PNGs named .webp. Checking `blob.type`
+ * rather than merely that a blob came back is what catches it.
+ */
+async function encodeAt(
+  bitmap: ImageBitmap,
+  maxEdge: number,
+  quality: number,
+): Promise<Prepared | null> {
+  const scale = Math.min(1, maxEdge / Math.max(bitmap.width, bitmap.height))
   const width = Math.round(bitmap.width * scale)
   const height = Math.round(bitmap.height * scale)
 
@@ -46,20 +52,42 @@ export async function prepareImage(file: File): Promise<Prepared> {
   canvas.width = width
   canvas.height = height
   const ctx = canvas.getContext('2d')
-  if (!ctx) throw new Error("Couldn't process that image.")
+  if (!ctx) return null
   ctx.drawImage(bitmap, 0, 0, width, height)
-  bitmap.close()
 
   const encode = (type: string) =>
-    new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, type, QUALITY))
+    new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, type, quality))
 
-  // WebP is far smaller; every browser that can run this app can also read it,
-  // but fall back rather than upload nothing.
-  const webp = await encode('image/webp')
-  if (webp) return { blob: webp, width, height, ext: 'webp', type: 'image/webp' }
+  for (const [type, ext] of [
+    ['image/webp', 'webp'],
+    ['image/jpeg', 'jpg'],
+  ] as const) {
+    const blob = await encode(type)
+    // The type check is the point: a PNG masquerading as WebP passes the
+    // truthiness check and is four times the size.
+    if (blob && blob.type === type) return { blob, width, height, ext, type }
+  }
+  return null
+}
 
-  const jpeg = await encode('image/jpeg')
-  if (jpeg) return { blob: jpeg, width, height, ext: 'jpg', type: 'image/jpeg' }
+/** Full-size copy plus a small one for grids, from a single decode. */
+export async function prepareImagePair(file: File): Promise<PreparedPair> {
+  if (!file.type.startsWith('image/')) throw new Error('That file is not an image.')
+  const bitmap = await decode(file)
+  try {
+    const full = await encodeAt(bitmap, MAX_EDGE, QUALITY)
+    if (!full) throw new Error("Couldn't process that image.")
+    // Only worth a second file if the original is meaningfully bigger.
+    const thumb =
+      Math.max(full.width, full.height) > THUMB_EDGE * 1.2
+        ? await encodeAt(bitmap, THUMB_EDGE, THUMB_QUALITY)
+        : null
+    return { full, thumb }
+  } finally {
+    bitmap.close()
+  }
+}
 
-  throw new Error("Couldn't process that image.")
+export async function prepareImage(file: File): Promise<Prepared> {
+  return (await prepareImagePair(file)).full
 }

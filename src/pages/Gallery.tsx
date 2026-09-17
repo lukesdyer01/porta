@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ImagePlus, Trash2, X } from 'lucide-react'
 import { useRef, useState } from 'react'
 import { useAuth } from '../auth/useAuth'
-import { prepareImage } from '../lib/images'
+import { prepareImagePair } from '../lib/images'
 import { supabase } from '../lib/supabase'
 
 import { usePageTitle } from '../lib/usePageTitle'
@@ -14,11 +14,15 @@ const SIGN_TTL = 60 * 60
 interface Shot {
   id: string
   storage_path: string
+  thumb_path: string | null
   caption: string | null
   width: number | null
   height: number | null
   uploaded_by: string
+  /** Full-size, for the lightbox. */
   url: string
+  /** Small copy for the grid; falls back to the full one on older photos. */
+  thumbUrl: string
 }
 
 export default function Gallery() {
@@ -38,7 +42,7 @@ export default function Gallery() {
     queryFn: async (): Promise<Shot[]> => {
       const { data, error } = await supabase
         .from('photos')
-        .select('id, storage_path, caption, width, height, uploaded_by')
+        .select('id, storage_path, thumb_path, caption, width, height, uploaded_by')
         .eq('trip_id', trip!.id)
         .eq('kind', 'trip')
         .order('created_at', { ascending: false })
@@ -47,17 +51,25 @@ export default function Gallery() {
       const rows = data ?? []
       if (rows.length === 0) return []
 
-      // One request for every URL. Signing per photo would be dozens of
-      // round-trips on a page that is already image-heavy.
+      // One request for every URL, thumbnails included. Signing per photo
+      // would be dozens of round-trips on a page that is already image-heavy.
+      const paths = [
+        ...new Set(rows.flatMap((r) => [r.storage_path, r.thumb_path].filter(Boolean) as string[])),
+      ]
       const { data: signed, error: sErr } = await supabase.storage
         .from('photos')
-        .createSignedUrls(rows.map((r) => r.storage_path), SIGN_TTL)
+        .createSignedUrls(paths, SIGN_TTL)
       if (sErr) throw new Error(sErr.message)
 
       const urls = new Map(signed.filter((s) => s.signedUrl).map((s) => [s.path!, s.signedUrl!]))
       return rows
         .filter((r) => urls.has(r.storage_path))
-        .map((r) => ({ ...r, url: urls.get(r.storage_path)! })) as Shot[]
+        .map((r) => ({
+          ...r,
+          url: urls.get(r.storage_path)!,
+          // Photos uploaded before thumbnails existed have none.
+          thumbUrl: (r.thumb_path && urls.get(r.thumb_path)) || urls.get(r.storage_path)!,
+        })) as Shot[]
     },
   })
 
@@ -69,24 +81,38 @@ export default function Gallery() {
       for (const [i, file] of files.entries()) {
         setProgress(`Uploading ${i + 1} of ${files.length}…`)
         try {
-          const img = await prepareImage(file)
-          const path = `trips/${trip.id}/gallery/${crypto.randomUUID()}.${img.ext}`
+          const { full, thumb } = await prepareImagePair(file)
+          const base = `trips/${trip.id}/gallery/${crypto.randomUUID()}`
+          const path = `${base}.${full.ext}`
+
           const { error: upErr } = await supabase.storage
             .from('photos')
-            .upload(path, img.blob, { contentType: img.type })
+            .upload(path, full.blob, { contentType: full.type })
           if (upErr) throw new Error(upErr.message)
+
+          let thumbPath: string | null = null
+          if (thumb) {
+            const tPath = `${base}.thumb.${thumb.ext}`
+            const { error: tErr } = await supabase.storage
+              .from('photos')
+              .upload(tPath, thumb.blob, { contentType: thumb.type })
+            // A missing thumbnail is not worth failing the upload over; the
+            // grid falls back to the full image.
+            if (!tErr) thumbPath = tPath
+          }
 
           const { error: rowErr } = await supabase.from('photos').insert({
             trip_id: trip.id,
             kind: 'trip',
             storage_path: path,
-            width: img.width,
-            height: img.height,
-            bytes: img.blob.size,
+            thumb_path: thumbPath,
+            width: full.width,
+            height: full.height,
+            bytes: full.blob.size,
             uploaded_by: profile.id,
           })
           if (rowErr) {
-            await supabase.storage.from('photos').remove([path])
+            await supabase.storage.from('photos').remove([path, ...(thumbPath ? [thumbPath] : [])])
             throw new Error(rowErr.message)
           }
         } catch (e) {
@@ -108,7 +134,9 @@ export default function Gallery() {
     mutationFn: async (s: Shot) => {
       const { error } = await supabase.from('photos').delete().eq('id', s.id)
       if (error) throw new Error(error.message)
-      await supabase.storage.from('photos').remove([s.storage_path])
+      await supabase.storage
+        .from('photos')
+        .remove([s.storage_path, ...(s.thumb_path ? [s.thumb_path] : [])])
     },
     onSuccess: () => {
       setOpen(null)
@@ -171,9 +199,10 @@ export default function Gallery() {
               aria-label={s.caption ?? 'Open photo'}
             >
               <img
-                src={s.url}
+                src={s.thumbUrl}
                 alt={s.caption ?? ''}
                 loading="lazy"
+                decoding="async"
                 width={s.width ?? undefined}
                 height={s.height ?? undefined}
                 className="aspect-square w-full object-cover transition hover:opacity-90"
