@@ -1,15 +1,15 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { CalendarDays, MapPin, Plus, Trash2 } from 'lucide-react'
 import { useState } from 'react'
-import { useParams } from 'react-router-dom'
 import { useAuth } from '../auth/useAuth'
 import EventComments from '../components/EventComments'
 import { btnGhost, btnPrimary, fieldClass, labelClass } from '../components/TripForm'
 import { supabase } from '../lib/supabase'
-import { dayLabel, timeLabel, useEvents, useTrips } from '../lib/trips'
+import { dayLabel, timeLabel, useEvents } from '../lib/trips'
 import type { EventKind, TripEvent } from '../lib/types'
 import { usePageTitle } from '../lib/usePageTitle'
 import { humanizeError } from '../lib/errors'
+import { useTripContext } from '../trip/useTrip'
 
 const KINDS: EventKind[] = ['activity', 'travel', 'birthday', 'reminder', 'chore', 'other']
 
@@ -24,11 +24,9 @@ const KIND_STYLE: Record<EventKind, string> = {
 
 export default function Calendar() {
   usePageTitle('Calendar')
-  const { year } = useParams()
   const { profile } = useAuth()
   const qc = useQueryClient()
-  const { data: trips = [] } = useTrips()
-  const trip = year ? trips.find((t) => String(t.year) === year) : trips[0]
+  const { trip } = useTripContext()
   const { data: events = [], isLoading } = useEvents(trip?.id)
 
   const [adding, setAdding] = useState(false)

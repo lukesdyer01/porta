@@ -1,13 +1,13 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ImagePlus, Trash2, X } from 'lucide-react'
 import { useRef, useState } from 'react'
-import { useParams } from 'react-router-dom'
 import { useAuth } from '../auth/useAuth'
 import { prepareImage } from '../lib/images'
 import { supabase } from '../lib/supabase'
-import { useTrips } from '../lib/trips'
+
 import { usePageTitle } from '../lib/usePageTitle'
 import { humanizeError } from '../lib/errors'
+import { useTripContext } from '../trip/useTrip'
 
 const SIGN_TTL = 60 * 60
 
@@ -23,11 +23,9 @@ interface Shot {
 
 export default function Gallery() {
   usePageTitle('Photos')
-  const { year } = useParams()
   const { profile, isOrganizer } = useAuth()
   const qc = useQueryClient()
-  const { data: trips = [] } = useTrips()
-  const trip = year ? trips.find((t) => String(t.year) === year) : trips[0]
+  const { trip } = useTripContext()
 
   const inputRef = useRef<HTMLInputElement>(null)
   const [progress, setProgress] = useState<string | null>(null)

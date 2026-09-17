@@ -1,19 +1,17 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { ChefHat } from 'lucide-react'
-import { useParams } from 'react-router-dom'
 import { useAuth } from '../auth/useAuth'
 import { fieldClass } from '../components/TripForm'
 import { supabase } from '../lib/supabase'
-import { dayLabel, tripDays, useHouseholds, useMeals, useTrips } from '../lib/trips'
+import { dayLabel, tripDays, useHouseholds, useMeals } from '../lib/trips'
 import { usePageTitle } from '../lib/usePageTitle'
+import { useTripContext } from '../trip/useTrip'
 
 export default function Meals() {
   usePageTitle('Dinners')
-  const { year } = useParams()
   const { profile } = useAuth()
   const qc = useQueryClient()
-  const { data: trips = [] } = useTrips()
-  const trip = year ? trips.find((t) => String(t.year) === year) : trips[0]
+  const { trip } = useTripContext()
   const { data: meals = [], isLoading } = useMeals(trip?.id)
   const { data: households = [] } = useHouseholds()
 

@@ -2,21 +2,23 @@ import { LogOut, User } from 'lucide-react'
 import { NavLink, Outlet } from 'react-router-dom'
 import { useAuth } from '../auth/useAuth'
 import { useOnline } from '../lib/useOnline'
+import { useTripContext } from '../trip/useTrip'
 
 const NAV = [
-  { to: '/', label: 'Trip', end: true },
-  { to: '/meals', label: 'Dinners', end: false },
-  { to: '/calendar', label: 'Calendar', end: false },
-  { to: '/expenses', label: 'Money', end: false },
-  { to: '/photos', label: 'Photos', end: false },
-  { to: '/journal', label: 'Journal', end: false },
-  { to: '/map', label: 'Map', end: false },
+  { section: 'trip', label: 'Trip', end: false },
+  { section: 'meals', label: 'Dinners', end: false },
+  { section: 'calendar', label: 'Calendar', end: false },
+  { section: 'expenses', label: 'Money', end: false },
+  { section: 'photos', label: 'Photos', end: false },
+  { section: 'journal', label: 'Journal', end: false },
+  { section: 'map', label: 'Map', end: false },
 ]
-const ORGANIZER_NAV = [{ to: '/members', label: 'Members', end: false }]
+const ORGANIZER_NAV = [{ section: 'members', label: 'Members', end: false }]
 
 export default function AppShell() {
   const { profile, signOut, isOrganizer } = useAuth()
   const online = useOnline()
+  const { trips, year, setYear, linkTo } = useTripContext()
   const nav = isOrganizer ? [...NAV, ...ORGANIZER_NAV] : NAV
 
   return (
@@ -39,6 +41,21 @@ export default function AppShell() {
               King Family Beach Week
             </h1>
           </div>
+
+          {trips.length > 1 && year != null && (
+            <select
+              aria-label="Switch year"
+              value={year}
+              onChange={(e) => setYear(Number(e.target.value))}
+              className="shrink-0 rounded-lg border border-[color:var(--border)] bg-[color:var(--surface)] px-2.5 py-1.5 text-sm outline-none focus:border-[color:var(--accent)]"
+            >
+              {trips.map((t) => (
+                <option key={t.id} value={t.year}>
+                  {t.year}
+                </option>
+              ))}
+            </select>
+          )}
 
           <NavLink
             to="/profile"
@@ -67,8 +84,8 @@ export default function AppShell() {
           <div className="flex gap-1">
             {nav.map((item) => (
               <NavLink
-                key={item.to}
-                to={item.to}
+                key={item.section}
+                to={linkTo(item.section)}
                 end={item.end}
                 className={({ isActive }) =>
                   `shrink-0 rounded-lg px-3 py-1.5 text-sm font-medium transition ${

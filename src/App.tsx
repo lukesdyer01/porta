@@ -18,6 +18,7 @@ import Trip from './pages/Trip'
 import NotConfigured from './pages/NotConfigured'
 import Pending from './pages/Pending'
 import Profile from './pages/Profile'
+import { TripProvider } from './trip/TripProvider'
 
 // Leaflet is a large dependency that most visits never touch, and this app is
 // opened on phone data at the beach. Load it only when the map is opened.
@@ -37,33 +38,39 @@ function Gate() {
   if (pending) return <Pending />
 
   return (
-    <Routes>
-      <Route element={<AppShell />}>
-        <Route index element={<Trip />} />
-        <Route path="trip/:year" element={<Trip />} />
-        <Route path="meals" element={<Meals />} />
-        <Route path="meals/:year" element={<Meals />} />
-        <Route path="calendar" element={<Calendar />} />
-        <Route path="calendar/:year" element={<Calendar />} />
-        <Route path="expenses" element={<Expenses />} />
-        <Route path="expenses/:year" element={<Expenses />} />
-        <Route path="photos" element={<Gallery />} />
-        <Route path="photos/:year" element={<Gallery />} />
-        <Route path="journal" element={<Journal />} />
-        <Route path="journal/:year" element={<Journal />} />
-        <Route
-          path="map"
-          element={
-            <Suspense fallback={<p className="text-sm text-[color:var(--text-muted)]">Loading map…</p>}>
-              <TripMap />
-            </Suspense>
-          }
-        />
-        <Route path="profile" element={<Profile />} />
-        <Route path="members" element={<Admin />} />
-        <Route path="*" element={<Trip />} />
-      </Route>
-    </Routes>
+    <TripProvider>
+      <Routes>
+        <Route element={<AppShell />}>
+          <Route index element={<Trip />} />
+          {/* Both forms: the nav links carry a year, but a bare path still works. */}
+          <Route path="trip" element={<Trip />} />
+          <Route path="trip/:year" element={<Trip />} />
+          <Route path="meals" element={<Meals />} />
+          <Route path="meals/:year" element={<Meals />} />
+          <Route path="calendar" element={<Calendar />} />
+          <Route path="calendar/:year" element={<Calendar />} />
+          <Route path="expenses" element={<Expenses />} />
+          <Route path="expenses/:year" element={<Expenses />} />
+          <Route path="photos" element={<Gallery />} />
+          <Route path="photos/:year" element={<Gallery />} />
+          <Route path="journal" element={<Journal />} />
+          <Route path="journal/:year" element={<Journal />} />
+          <Route
+            path="map"
+            element={
+              <Suspense
+                fallback={<p className="text-sm text-[color:var(--text-muted)]">Loading map…</p>}
+              >
+                <TripMap />
+              </Suspense>
+            }
+          />
+          <Route path="profile" element={<Profile />} />
+          <Route path="members" element={<Admin />} />
+          <Route path="*" element={<Trip />} />
+        </Route>
+      </Routes>
+    </TripProvider>
   )
 }
 

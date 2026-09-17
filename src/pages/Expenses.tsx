@@ -1,23 +1,21 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { ArrowRight, Plus, Receipt, Trash2 } from 'lucide-react'
 import { useMemo, useState } from 'react'
-import { useParams } from 'react-router-dom'
 import { useAuth } from '../auth/useAuth'
 import ExpenseForm from '../components/ExpenseForm'
 import { btnGhost, btnPrimary } from '../components/TripForm'
 import { settle } from '../lib/settle'
 import { supabase } from '../lib/supabase'
-import { money, useBalances, useExpenses, useMembers, useTrips } from '../lib/trips'
+import { money, useBalances, useExpenses, useMembers } from '../lib/trips'
 import { usePageTitle } from '../lib/usePageTitle'
 import { humanizeError } from '../lib/errors'
+import { useTripContext } from '../trip/useTrip'
 
 export default function Expenses() {
   usePageTitle('Money')
-  const { year } = useParams()
   const { profile, isOrganizer } = useAuth()
   const qc = useQueryClient()
-  const { data: trips = [] } = useTrips()
-  const trip = year ? trips.find((t) => String(t.year) === year) : trips[0]
+  const { trip } = useTripContext()
 
   const { data: expenses = [], isLoading } = useExpenses(trip?.id)
   const { data: balances = [] } = useBalances(trip?.id)

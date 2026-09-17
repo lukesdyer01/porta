@@ -1,13 +1,13 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { BookOpen, Pencil, Plus, Trash2 } from 'lucide-react'
 import { useState } from 'react'
-import { useParams } from 'react-router-dom'
 import { useAuth } from '../auth/useAuth'
 import { btnGhost, btnPrimary, fieldClass, labelClass } from '../components/TripForm'
 import { supabase } from '../lib/supabase'
-import { dayLabel, useTrips } from '../lib/trips'
+import { dayLabel } from '../lib/trips'
 import { usePageTitle } from '../lib/usePageTitle'
 import { humanizeError } from '../lib/errors'
+import { useTripContext } from '../trip/useTrip'
 
 interface Entry {
   id: string
@@ -20,11 +20,9 @@ interface Entry {
 
 export default function Journal() {
   usePageTitle('Journal')
-  const { year } = useParams()
   const { profile, isOrganizer } = useAuth()
   const qc = useQueryClient()
-  const { data: trips = [] } = useTrips()
-  const trip = year ? trips.find((t) => String(t.year) === year) : trips[0]
+  const { trip } = useTripContext()
 
   const [editing, setEditing] = useState<string | 'new' | null>(null)
   const [title, setTitle] = useState('')

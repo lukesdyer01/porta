@@ -1,6 +1,6 @@
 import { ExternalLink, Home as HomeIcon, MapPin, Pencil, Plus } from 'lucide-react'
 import { useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../auth/useAuth'
 import HouseForm from '../components/HouseForm'
 import HousePhoto from '../components/HousePhoto'
@@ -8,24 +8,21 @@ import HouseReviews from '../components/HouseReviews'
 import HouseInfoPanel from '../components/HouseInfoPanel'
 import RsvpCard from '../components/RsvpCard'
 import TripForm, { btnGhost, btnPrimary } from '../components/TripForm'
-import { dateRange, money, useHouse, useTrips } from '../lib/trips'
+import { dateRange, money, useHouse } from '../lib/trips'
+import { useTripContext } from '../trip/useTrip'
 import { usePageTitle } from '../lib/usePageTitle'
 import { humanizeError } from '../lib/errors'
 
 export default function Trip() {
   usePageTitle('Trip')
-  const { year: yearParam } = useParams()
   const navigate = useNavigate()
   const { isOrganizer } = useAuth()
-  const { data: trips = [], isLoading, error } = useTrips()
+  const { trips, trip, year: yearParam, isLoading, error } = useTripContext()
 
   const [creating, setCreating] = useState(false)
   const [editingTrip, setEditingTrip] = useState(false)
   const [editingHouse, setEditingHouse] = useState(false)
 
-  // No year in the URL means "the newest trip", which is what people want
-  // nine times out of ten.
-  const trip = yearParam ? trips.find((t) => String(t.year) === yearParam) : trips[0]
   const { data: house } = useHouse(trip?.id)
 
   if (isLoading) return <p className="text-sm text-[color:var(--text-muted)]">Loading…</p>
@@ -101,20 +98,6 @@ export default function Trip() {
           {when && <p className="mt-1 text-sm text-[color:var(--text-muted)]">{when}</p>}
         </div>
 
-        {trips.length > 1 && (
-          <select
-            aria-label="Switch year"
-            value={trip.year}
-            onChange={(e) => navigate(`/trip/${e.target.value}`)}
-            className="rounded-lg border border-[color:var(--border)] bg-[color:var(--surface-raised)] px-3 py-2 text-sm outline-none focus:border-[color:var(--accent)]"
-          >
-            {trips.map((t) => (
-              <option key={t.id} value={t.year}>
-                {t.year}
-              </option>
-            ))}
-          </select>
-        )}
 
         {isOrganizer && (
           <button onClick={() => setCreating(true)} className={btnGhost} title="New trip">
