@@ -32,8 +32,11 @@ export default function AppShell() {
           You&rsquo;re offline — changes won&rsquo;t save until the signal comes back.
         </p>
       )}
-      <header className="sticky top-0 z-20 bg-[color:var(--surface-raised)]/90 backdrop-blur">
-        <div className="mx-auto flex max-w-5xl items-center gap-3 px-4 pt-3">
+      <header className="sticky top-0 z-20 bg-[color:var(--surface)]/95 backdrop-blur">
+        {/* The icon's sky. Everything on it is near-black: white measures
+            1.98:1 against the light end of this gradient. */}
+        <div className="[background:var(--sky)] text-[color:var(--on-sky)]">
+        <div className="mx-auto flex max-w-5xl items-center gap-3 px-4 pt-3 pb-1">
           <div className="min-w-0 flex-1">
             <h1 className="font-display truncate text-xl leading-tight font-semibold">
               {/* Map and Members cover every year, so a single year would be a
@@ -47,7 +50,7 @@ export default function AppShell() {
               aria-label="Switch year"
               value={year}
               onChange={(e) => setYear(Number(e.target.value))}
-              className="shrink-0 rounded-lg border border-[color:var(--border)] bg-[color:var(--surface)] px-2.5 py-1.5 text-sm outline-none focus:border-[color:var(--accent)]"
+              className="shrink-0 rounded-lg border border-[color:var(--on-sky-line)] bg-white/25 px-2.5 py-1.5 text-sm text-[color:var(--on-sky)] outline-none"
             >
               {trips.map((t) => (
                 <option key={t.id} value={t.year}>
@@ -61,7 +64,7 @@ export default function AppShell() {
             to="/profile"
             aria-label="Your profile"
             title={profile?.display_name ?? 'Profile'}
-            className="grid size-9 shrink-0 place-items-center rounded-full border border-[color:var(--border)] transition hover:bg-[color:var(--surface-sunk)]"
+            className="grid size-9 shrink-0 place-items-center rounded-full border border-[color:var(--on-sky-line)] transition hover:bg-white/25"
           >
             <User className="size-4" aria-hidden="true" />
           </NavLink>
@@ -69,10 +72,24 @@ export default function AppShell() {
           <button
             onClick={() => void signOut()}
             aria-label="Sign out"
-            className="grid size-9 shrink-0 place-items-center rounded-full border border-[color:var(--border)] transition hover:bg-[color:var(--surface-sunk)]"
+            className="grid size-9 shrink-0 place-items-center rounded-full border border-[color:var(--on-sky-line)] transition hover:bg-white/25"
           >
             <LogOut className="size-4" aria-hidden="true" />
           </button>
+        </div>
+
+          <svg
+            className="-mb-px block h-3 w-full text-[color:var(--surface)]"
+            viewBox="0 0 1200 24"
+            preserveAspectRatio="none"
+            aria-hidden="true"
+            focusable="false"
+          >
+            <path
+              d="M0 24h1200v-8c-75 0-75-10-150-10S975 16 900 16s-75-10-150-10S675 16 600 16s-75-10-150-10S375 16 300 16s-75-10-150-10S75 16 0 16z"
+              fill="currentColor"
+            />
+          </svg>
         </div>
 
         {/*
@@ -99,18 +116,6 @@ export default function AppShell() {
             ))}
           </div>
         </nav>
-        <svg
-          className="block h-3 w-full text-[color:var(--surface-raised)]"
-          viewBox="0 0 1200 24"
-          preserveAspectRatio="none"
-          aria-hidden="true"
-          focusable="false"
-        >
-          <path
-            d="M0 0h1200v8c-75 0-75 10-150 10S975 8 900 8s-75 10-150 10S675 8 600 8s-75 10-150 10S375 8 300 8s-75 10-150 10S75 8 0 8z"
-            fill="currentColor"
-          />
-        </svg>
       </header>
 
       {/* pb-24 on mobile keeps the last row of content clear of the tab bar. */}

@@ -9,28 +9,30 @@
   --color-sand-50: #fbf6ec;
   --color-sand-100: #f4ece0;
   --color-sand-200: #ece0cd;
-  --color-sand-300: #cdb899;
+  --color-sand-300: #aec6d6;
   --color-sand-400: #bfa680;
 
-  --color-gulf-50: #eefaf9;
-  --color-gulf-100: #d2f2ef;
-  --color-gulf-300: #6fcdc6;
-  --color-gulf-500: #1f8f89;
-  --color-gulf-600: #16706c;
-  --color-gulf-700: #115856;
-  --color-gulf-900: #0a3130;
+  /* Ocean, taken from the sea in the app icon and pulled toward blue. */
+  --color-gulf-50: #eaf1f5;
+  --color-gulf-100: #d6e7f0;
+  --color-gulf-300: #7fc4e3;
+  --color-gulf-500: #1b7fad;
+  --color-gulf-600: #0a5c85;
+  --color-gulf-700: #084a6c;
+  --color-gulf-900: #05293d;
 
-  --color-sunset-300: #f7b08a;
-  --color-sunset-500: #e8734a;
+  /* The icon's sky, stop for stop. */
+  --color-sunset-300: #f6a66b;
+  --color-sunset-500: #e4694a;
   /* Used as TEXT for errors, so it has to clear 4.5:1 on sand and cream.
      The old #d15a32 managed only 3.9:1. */
-  --color-sunset-600: #a8401a;
+  --color-sunset-600: #b4461c;
 
   /* #6b7b84 was already failing at 4.21:1 on the old near-white page, and a
      warmer background makes it worse. This clears 4.5:1 on sand and cream. */
-  --color-ink-500: #55646d;
-  --color-ink-700: #3a4b55;
-  --color-ink-900: #1c2b33;
+  --color-ink-500: #4d6675;
+  --color-ink-700: #2f4a59;
+  --color-ink-900: #132430;
 
   --font-display: 'Bitter', Georgia, 'Times New Roman', serif;
   --font-sans: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
@@ -38,47 +40,58 @@
 
 /* Semantic tokens. Light is the base definition; dark only redefines. */
 :root {
-  --surface: #eee2d0;
-  --surface-raised: #fffefb;
-  --surface-sunk: #ece0cd;
+  --surface: #eaf1f5;
+  --surface-raised: #ffffff;
+  --surface-sunk: #dde8ef;
   --border: var(--color-sand-300);
   --text: var(--color-ink-900);
   --text-muted: var(--color-ink-500);
-  --accent: #12706b;
+  --accent: #0a5c85;
   --accent-contrast: #ffffff;
   /* Sky at the top, sand at the bottom. Fixed so it stays put while the page
      scrolls rather than repeating down a long trip page. */
-  --page-wash: linear-gradient(180deg, #e2eeeb 0%, #eee2d0 42%, #e9dcc6 100%);
-  --card-shadow: 0 1px 2px rgba(120, 94, 58, 0.05), 0 6px 16px -8px rgba(120, 94, 58, 0.18);
+  --page-wash: linear-gradient(180deg, #f3f8fa 0%, #eaf1f5 45%, #dfebf2 100%);
+  /* The icon's sky, used as the header band. White on it measures 1.98:1, so
+     everything sitting on it is near-black instead. */
+  --sky: linear-gradient(160deg, #f6a66b 0%, #f08a55 55%, #e4694a 100%);
+  --on-sky: #2a1206;
+  --on-sky-line: rgba(42, 18, 6, 0.28);
+  --card-shadow: 0 1px 2px rgba(19, 36, 48, 0.05), 0 6px 16px -8px rgba(19, 36, 48, 0.18);
   color-scheme: light;
 }
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme='light']) {
-    --surface: #0d1f24;
-    --surface-raised: #1a353d;
-    --surface-sunk: #0a181c;
-    --border: #25424a;
-    --text: #f2e9db;
-    --text-muted: #9db3bb;
+    --surface: #0b1d2a;
+    --surface-raised: #13293a;
+    --surface-sunk: #081622;
+    --border: #22415a;
+    --text: #e8f0f5;
+    --text-muted: #9bb4c6;
     --accent: var(--color-gulf-300);
     --accent-contrast: var(--color-gulf-900);
-    --page-wash: linear-gradient(180deg, #0a2a30 0%, #0d1f24 45%, #101a1d 100%);
+    --page-wash: linear-gradient(180deg, #0a2637 0%, #0b1d2a 45%, #0a1826 100%);
+    --sky: linear-gradient(160deg, #c9713f 0%, #b4563a 55%, #98402c 100%);
+    --on-sky: #fff3e6;
+    --on-sky-line: rgba(255, 243, 230, 0.3);
     --card-shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 6px 16px -8px rgba(0, 0, 0, 0.5);
     color-scheme: dark;
   }
 }
 
 :root[data-theme='dark'] {
-  --surface: #0d1f24;
-  --surface-raised: #1a353d;
-  --surface-sunk: #0a181c;
-  --border: #25424a;
-  --text: #f2e9db;
-  --text-muted: #9db3bb;
+  --surface: #0b1d2a;
+  --surface-raised: #13293a;
+  --surface-sunk: #081622;
+  --border: #22415a;
+  --text: #e8f0f5;
+  --text-muted: #9bb4c6;
   --accent: var(--color-gulf-300);
   --accent-contrast: var(--color-gulf-900);
-  --page-wash: linear-gradient(180deg, #0a2a30 0%, #0d1f24 45%, #101a1d 100%);
+  --page-wash: linear-gradient(180deg, #0a2637 0%, #0b1d2a 45%, #0a1826 100%);
+    --sky: linear-gradient(160deg, #c9713f 0%, #b4563a 55%, #98402c 100%);
+    --on-sky: #fff3e6;
+    --on-sky-line: rgba(255, 243, 230, 0.3);
   --card-shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 6px 16px -8px rgba(0, 0, 0, 0.5);
   color-scheme: dark;
 }
