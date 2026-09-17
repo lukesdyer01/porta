@@ -278,3 +278,17 @@ export function useBalances(tripId: string | undefined) {
     },
   })
 }
+
+/**
+ * Has this trip already happened?
+ *
+ * Prefer the end date, since a trip in December of the current year is not
+ * past in January. Fall back to the year only when no dates are recorded,
+ * which is common for backfilled trips.
+ */
+export function isPastTrip(trip: Trip | undefined): boolean {
+  if (!trip) return false
+  if (trip.status === 'archived') return true
+  if (trip.end_date) return trip.end_date < new Date().toISOString().slice(0, 10)
+  return trip.year < new Date().getFullYear()
+}

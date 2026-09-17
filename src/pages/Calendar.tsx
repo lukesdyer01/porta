@@ -24,7 +24,7 @@ const KIND_STYLE: Record<EventKind, string> = {
 
 export default function Calendar() {
   usePageTitle('Calendar')
-  const { profile } = useAuth()
+  const { profile, isOrganizer } = useAuth()
   const qc = useQueryClient()
   const { trip } = useTripContext()
   const { data: events = [], isLoading } = useEvents(trip?.id)
@@ -100,13 +100,18 @@ export default function Calendar() {
           <CalendarDays className="size-5" aria-hidden="true" />
           What&rsquo;s happening
         </h2>
-        <button onClick={() => setAdding((v) => !v)} className={`ml-auto ${btnGhost}`}>
-          <Plus className="mr-1.5 inline size-4" aria-hidden="true" />
-          Add
-        </button>
+        {isOrganizer && (
+          <button onClick={() => setAdding((v) => !v)} className={`ml-auto ${btnGhost}`}>
+            <Plus className="mr-1.5 inline size-4" aria-hidden="true" />
+            Add
+          </button>
+        )}
       </div>
       <p className="mt-1 text-sm text-[color:var(--text-muted)]">
-        Everything that isn&rsquo;t dinner. Anyone can add or change anything here.
+        Everything that isn&rsquo;t dinner.{' '}
+        {isOrganizer
+          ? 'You can add and change these; everyone else can read and comment.'
+          : 'An organizer sets these up — anyone can comment.'}
       </p>
 
       {adding && (
@@ -213,13 +218,15 @@ export default function Calendar() {
                     )}
                     <EventComments eventId={e.id} />
                   </div>
-                  <button
-                    onClick={() => { if (confirm(`Remove "${e.title}"?`)) remove.mutate(e.id) }}
-                    aria-label={`Remove ${e.title}`}
-                    className="grid size-8 shrink-0 place-items-center rounded-lg border border-[color:var(--border)] transition hover:bg-[color:var(--surface-sunk)]"
-                  >
-                    <Trash2 className="size-4" aria-hidden="true" />
-                  </button>
+                  {isOrganizer && (
+                    <button
+                      onClick={() => { if (confirm(`Remove "${e.title}"?`)) remove.mutate(e.id) }}
+                      aria-label={`Remove ${e.title}`}
+                      className="grid size-8 shrink-0 place-items-center rounded-lg border border-[color:var(--border)] transition hover:bg-[color:var(--surface-sunk)]"
+                    >
+                      <Trash2 className="size-4" aria-hidden="true" />
+                    </button>
+                  )}
                 </li>
               ))}
             </ul>

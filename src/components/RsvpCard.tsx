@@ -14,7 +14,7 @@ const CHOICES: { value: RsvpStatus; label: string }[] = [
   { value: 'no', label: 'Not this year' },
 ]
 
-export default function RsvpCard({ tripId }: { tripId: string }) {
+export default function RsvpCard({ tripId, past = false }: { tripId: string; past?: boolean }) {
   const { profile } = useAuth()
   const qc = useQueryClient()
   const { data: rsvps = [], isLoading } = useRsvps(tripId)
@@ -94,9 +94,10 @@ export default function RsvpCard({ tripId }: { tripId: string }) {
     <section className="rounded-xl border border-[color:var(--border)] bg-[color:var(--surface-raised)] p-5">
       <h3 className="flex items-center gap-2 font-medium">
         <CalendarCheck className="size-4" aria-hidden="true" />
-        Are you coming?
+        {past ? 'Who came' : 'Are you coming?'}
       </h3>
 
+      {!past && (
       <div className="mt-3 flex flex-wrap gap-2">
         {CHOICES.map((c) => {
           const active = status === c.value
@@ -120,8 +121,9 @@ export default function RsvpCard({ tripId }: { tripId: string }) {
           )
         })}
       </div>
+      )}
 
-      {status !== 'no' && status !== 'pending' && (
+      {!past && status !== 'no' && status !== 'pending' && (
         <div className="mt-4 space-y-4">
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
@@ -166,10 +168,10 @@ export default function RsvpCard({ tripId }: { tripId: string }) {
       {error && <p role="alert" className="mt-3 text-sm text-[color:var(--color-sunset-600)]">{error}</p>}
 
       {/* ---- roster ---- */}
-      <div className="mt-6 border-t border-[color:var(--border)] pt-5">
+      <div className={past ? 'mt-4' : 'mt-6 border-t border-[color:var(--border)] pt-5'}>
         <h4 className="flex items-center gap-2 text-sm font-medium">
           <Users className="size-4" aria-hidden="true" />
-          Who&rsquo;s coming
+          {past ? 'On the trip' : "Who's coming"}
           {heads > 0 && (
             <span className="font-normal text-[color:var(--text-muted)]">
               &middot; {heads} {heads === 1 ? 'person' : 'people'}
@@ -179,7 +181,9 @@ export default function RsvpCard({ tripId }: { tripId: string }) {
 
         {isLoading && <p className="mt-2 text-sm text-[color:var(--text-muted)]">Loading…</p>}
         {!isLoading && going.length === 0 && maybe.length === 0 && (
-          <p className="mt-2 text-sm text-[color:var(--text-muted)]">Nobody has RSVP&rsquo;d yet.</p>
+          <p className="mt-2 text-sm text-[color:var(--text-muted)]">
+            {past ? 'No RSVPs were recorded for this trip.' : 'Nobody has RSVP’d yet.'}
+          </p>
         )}
 
         {going.length > 0 && (

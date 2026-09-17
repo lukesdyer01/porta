@@ -8,7 +8,7 @@ import HouseReviews from '../components/HouseReviews'
 import HouseInfoPanel from '../components/HouseInfoPanel'
 import RsvpCard from '../components/RsvpCard'
 import TripForm, { btnGhost, btnPrimary } from '../components/TripForm'
-import { dateRange, money, useHouse } from '../lib/trips'
+import { dateRange, isPastTrip, money, useHouse } from '../lib/trips'
 import { useTripContext } from '../trip/useTrip'
 import { usePageTitle } from '../lib/usePageTitle'
 import { humanizeError } from '../lib/errors'
@@ -137,7 +137,7 @@ export default function Trip() {
 
       {/* ---- rsvp ---- */}
       <div className="mt-8">
-        <RsvpCard tripId={trip.id} />
+        <RsvpCard tripId={trip.id} past={isPastTrip(trip)} />
       </div>
 
       {/* ---- house ---- */}

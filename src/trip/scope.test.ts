@@ -21,3 +21,35 @@ describe('parsePath', () => {
     for (const s of ['map', 'members', 'profile']) expect(YEAR_SCOPED.has(s), s).toBe(false)
   })
 })
+
+import { isPastTrip } from '../lib/trips'
+import type { Trip } from '../lib/types'
+
+const trip = (o: Partial<Trip>): Trip => ({
+  id: 'x', year: 2026, name: '', start_date: null, end_date: null,
+  status: 'planning', notes: null, ...o,
+})
+
+describe('isPastTrip', () => {
+  const thisYear = new Date().getFullYear()
+
+  it('treats an archived trip as past whatever its dates say', () => {
+    expect(isPastTrip(trip({ status: 'archived', year: thisYear + 5 }))).toBe(true)
+  })
+
+  it('prefers the end date over the year', () => {
+    // December of this year is not past just because it is the current year.
+    expect(isPastTrip(trip({ year: thisYear, end_date: `${thisYear}-12-31` }))).toBe(false)
+    expect(isPastTrip(trip({ year: thisYear, end_date: `${thisYear - 1}-07-08` }))).toBe(true)
+  })
+
+  it('falls back to the year when a backfilled trip has no dates', () => {
+    expect(isPastTrip(trip({ year: thisYear - 1 }))).toBe(true)
+    expect(isPastTrip(trip({ year: thisYear }))).toBe(false)
+    expect(isPastTrip(trip({ year: thisYear + 1 }))).toBe(false)
+  })
+
+  it('is false when there is no trip', () => {
+    expect(isPastTrip(undefined)).toBe(false)
+  })
+})
