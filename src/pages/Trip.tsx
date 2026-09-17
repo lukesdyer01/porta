@@ -147,9 +147,12 @@ export default function Trip() {
         </div>
       )}
 
-      <div className="mt-6">
-        <PackingSummary tripId={trip.id} year={trip.year} />
-      </div>
+      {/* Same reasoning as the forecast above: nobody is still packing for 2019. */}
+      {!isPastTrip(trip) && (
+        <div className="mt-6">
+          <PackingSummary tripId={trip.id} year={trip.year} />
+        </div>
+      )}
 
       {/* ---- rsvp ---- */}
       <div className="mt-8">

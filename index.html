@@ -8,7 +8,11 @@
     <link rel="apple-touch-icon" href="/porta/apple-touch-icon.png" />
     <meta name="apple-mobile-web-app-title" content="Port A" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <!-- "black-translucent" draws the page UNDER the status bar, so the sticky
+         header slid beneath the clock on scroll — and iOS paints those icons
+         white, which measures 1.98:1 on our sunset header. "default" gives the
+         status bar its own strip, tinted by theme-color, with dark icons. -->
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <link rel="manifest" href="/porta/manifest.webmanifest" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="theme-color" content="#f6a66b" />

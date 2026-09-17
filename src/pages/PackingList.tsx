@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useAuth } from '../auth/useAuth'
 import { humanizeError } from '../lib/errors'
 import { useTripItems } from '../lib/items'
+import { isPastTrip } from '../lib/trips'
 import { supabase } from '../lib/supabase'
 import { usePageTitle } from '../lib/usePageTitle'
 import type { ItemKind, TripItem } from '../lib/types'
@@ -70,6 +71,16 @@ export default function PackingList() {
   })
 
   if (!trip) return <p className="text-sm text-[color:var(--text-muted)]">No trip yet.</p>
+
+  // Reachable by bookmark, or by switching the year while on this page. The
+  // lists are hidden rather than shown read-only: a closed-out trip's leftover
+  // "buy ice" reads as a task somebody still owes.
+  if (isPastTrip(trip))
+    return (
+      <p className="max-w-3xl rounded-lg bg-[color:var(--surface-sunk)] px-4 py-3 text-sm text-[color:var(--text-muted)]">
+        The {trip.year} trip is done — its packing and shopping lists are closed.
+      </p>
+    )
 
   const busy = add.isPending || patch.isPending || remove.isPending
 

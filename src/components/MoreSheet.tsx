@@ -3,11 +3,12 @@ import { useEffect } from 'react'
 import { NavLink } from 'react-router-dom'
 import { useAuth } from '../auth/useAuth'
 import { buildStamp, hardRefresh } from '../lib/hardRefresh'
+import { isPastTrip } from '../lib/trips'
 import { useTripContext } from '../trip/useTrip'
 
 export default function MoreSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { isOrganizer, signOut } = useAuth()
-  const { linkTo } = useTripContext()
+  const { linkTo, trip } = useTripContext()
 
   // Escape closes it, like any other dismissible layer.
   useEffect(() => {
@@ -23,7 +24,8 @@ export default function MoreSheet({ open, onClose }: { open: boolean; onClose: (
 
   const items = [
     { to: linkTo('journal'), label: 'Journal', Icon: BookOpen },
-    { to: linkTo('list'), label: 'Packing & shopping', Icon: ListChecks },
+    // A finished trip has nothing left to pack or buy.
+    ...(isPastTrip(trip) ? [] : [{ to: linkTo('list'), label: 'Packing & shopping', Icon: ListChecks }]),
     { to: '/map', label: 'Map', Icon: Map },
     ...(isOrganizer ? [{ to: '/members', label: 'Members', Icon: Users }] : []),
     { to: '/profile', label: 'Your profile', Icon: User },

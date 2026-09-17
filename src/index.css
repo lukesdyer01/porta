@@ -108,9 +108,12 @@ body {
   color: var(--text);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
-  /* Respect the iPhone notch/home indicator — this lives on a phone at the beach. */
-  padding: env(safe-area-inset-top) env(safe-area-inset-right)
-    env(safe-area-inset-bottom) env(safe-area-inset-left);
+  /* Respect the iPhone notch/home indicator — this lives on a phone at the beach.
+     The TOP inset is deliberately not here: the header is position:sticky, which
+     pins to the viewport top and ignores body padding, so it slid under the clock
+     on scroll. That inset lives on the header itself instead. */
+  padding: 0 env(safe-area-inset-right) env(safe-area-inset-bottom)
+    env(safe-area-inset-left);
 }
 
 /* Don't let a stray wide table or map scroll the whole page sideways. */

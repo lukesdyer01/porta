@@ -24,18 +24,24 @@ export default function AppShell() {
 
   return (
     <div className="flex min-h-dvh flex-col">
-      {!online && (
-        <p
-          role="status"
-          className="bg-[color:var(--color-sunset-600)] px-4 py-1.5 text-center text-sm text-white"
-        >
-          You&rsquo;re offline — changes won&rsquo;t save until the signal comes back.
-        </p>
-      )}
       <header className="sticky top-0 z-20 bg-[color:var(--surface)]/95 backdrop-blur">
         {/* The icon's sky. Everything on it is near-black: white measures
-            1.98:1 against the light end of this gradient. */}
-        <div className="[background:var(--sky)] text-[color:var(--on-sky)]">
+            1.98:1 against the light end of this gradient.
+
+            It also carries the top safe-area inset. A sticky header pins to the
+            VIEWPORT top, so padding on <body> only held it clear before the first
+            scroll — after that it slid under the status bar. Padding here means the
+            gradient fills the inset and the title never reaches the clock. The
+            offline banner moved inside for the same reason. */}
+        <div className="[background:var(--sky)] pt-[env(safe-area-inset-top)] text-[color:var(--on-sky)]">
+          {!online && (
+            <p
+              role="status"
+              className="bg-[color:var(--color-sunset-600)] px-4 py-1.5 text-center text-sm text-white"
+            >
+              You&rsquo;re offline — changes won&rsquo;t save until the signal comes back.
+            </p>
+          )}
         <div className="mx-auto flex max-w-5xl items-center gap-3 px-4 pt-3 pb-1">
           <div className="min-w-0 flex-1">
             <h1 className="font-display truncate text-xl leading-tight font-semibold">
