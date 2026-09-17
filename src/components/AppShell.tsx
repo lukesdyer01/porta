@@ -3,9 +3,10 @@ import { NavLink, Outlet } from 'react-router-dom'
 import { useAuth } from '../auth/useAuth'
 import { useOnline } from '../lib/useOnline'
 import { useTripContext } from '../trip/useTrip'
+import TabBar from './TabBar'
 
 const NAV = [
-  { section: 'trip', label: 'Trip', end: false },
+  { section: 'trips', label: 'Trips', end: false },
   { section: 'meals', label: 'Dinners', end: false },
   { section: 'calendar', label: 'Calendar', end: false },
   { section: 'expenses', label: 'Money', end: false },
@@ -75,16 +76,15 @@ export default function AppShell() {
         </div>
 
         {/*
-          Scrolls sideways rather than hiding on small screens. This was
-          `hidden sm:flex`, which left a phone — the only device this is used on
-          at the beach — with no navigation at all.
+          Desktop only: phones get the bottom tab bar instead, which is both
+          easier to reach one-handed and how a native app behaves.
         */}
-        <nav className="mx-auto max-w-5xl overflow-x-auto px-4 pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        <nav className="mx-auto hidden max-w-5xl overflow-x-auto px-4 pb-2 [scrollbar-width:none] md:block [&::-webkit-scrollbar]:hidden">
           <div className="flex gap-1">
             {nav.map((item) => (
               <NavLink
                 key={item.section}
-                to={linkTo(item.section)}
+                to={item.section === 'trips' ? '/' : linkTo(item.section)}
                 end={item.end}
                 className={({ isActive }) =>
                   `shrink-0 rounded-lg px-3 py-1.5 text-sm font-medium transition ${
@@ -101,9 +101,12 @@ export default function AppShell() {
         </nav>
       </header>
 
-      <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-6">
+      {/* pb-24 on mobile keeps the last row of content clear of the tab bar. */}
+      <main className="mx-auto w-full max-w-5xl flex-1 px-4 pt-6 pb-24 md:pb-6">
         <Outlet />
       </main>
+
+      <TabBar />
     </div>
   )
 }

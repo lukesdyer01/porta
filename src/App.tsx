@@ -15,6 +15,7 @@ import Gallery from './pages/Gallery'
 import Journal from './pages/Journal'
 import Meals from './pages/Meals'
 import Trip from './pages/Trip'
+import Trips from './pages/Trips'
 import NotConfigured from './pages/NotConfigured'
 import Pending from './pages/Pending'
 import Profile from './pages/Profile'
@@ -41,7 +42,7 @@ function Gate() {
     <TripProvider>
       <Routes>
         <Route element={<AppShell />}>
-          <Route index element={<Trip />} />
+          <Route index element={<Trips />} />
           {/* Both forms: the nav links carry a year, but a bare path still works. */}
           <Route path="trip" element={<Trip />} />
           <Route path="trip/:year" element={<Trip />} />
@@ -67,7 +68,7 @@ function Gate() {
           />
           <Route path="profile" element={<Profile />} />
           <Route path="members" element={<Admin />} />
-          <Route path="*" element={<Trip />} />
+          <Route path="*" element={<Trips />} />
         </Route>
       </Routes>
     </TripProvider>

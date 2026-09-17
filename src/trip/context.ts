@@ -18,15 +18,22 @@ export interface TripContextValue {
 
 export const TripContext = createContext<TripContextValue | null>(null)
 
-/** Sections that belong to one trip. `map` and `members` span all years. */
+/**
+ * Sections that belong to one trip. `trips` (the index), `map` and `members`
+ * all span every year, so they are deliberately absent.
+ */
 export const YEAR_SCOPED = new Set(['trip', 'meals', 'calendar', 'expenses', 'photos', 'journal'])
+
+/** Sections that live behind the phone tab bar's "More" sheet. */
+export const MORE_SECTIONS = ['journal', 'map', 'members', 'profile']
 
 export function parsePath(pathname: string): { section: string; year: number | null } {
   const parts = pathname.split('/').filter(Boolean)
-  const section = parts[0] ?? 'trip'
+  // The root is the trips index, which covers every year — not a single trip.
+  const section = parts[0] || 'trips'
   const raw = parts[1]
   return {
-    section: section === '' ? 'trip' : section,
+    section,
     year: raw && /^\d{4}$/.test(raw) ? Number(raw) : null,
   }
 }

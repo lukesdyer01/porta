@@ -6,8 +6,14 @@ describe('parsePath', () => {
     expect(parsePath('/meals/2025')).toEqual({ section: 'meals', year: 2025 })
     expect(parsePath('/trip/1999')).toEqual({ section: 'trip', year: 1999 })
   })
-  it('treats the index as the trip section', () => {
-    expect(parsePath('/')).toEqual({ section: 'trip', year: null })
+  it('treats the root as the trips index, not a single trip', () => {
+    expect(parsePath('/')).toEqual({ section: 'trips', year: null })
+    expect(parsePath('')).toEqual({ section: 'trips', year: null })
+  })
+
+  it('keeps the index unscoped and a single trip scoped', () => {
+    expect(YEAR_SCOPED.has('trips')).toBe(false)
+    expect(YEAR_SCOPED.has('trip')).toBe(true)
   })
   it('leaves the year null when the path has none', () => {
     expect(parsePath('/expenses')).toEqual({ section: 'expenses', year: null })
