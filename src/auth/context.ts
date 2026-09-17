@@ -10,6 +10,8 @@ export interface AuthState {
   /** Signed in, but not on the invite list — shows the "pending" screen. */
   pending: boolean
   isOrganizer: boolean
+  /** The tier above organizer: manages people, roles and households. */
+  isOwner: boolean
   refreshProfile: () => Promise<void>
   signOut: () => Promise<void>
 }

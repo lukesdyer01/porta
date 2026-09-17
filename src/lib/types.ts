@@ -1,4 +1,4 @@
-export type MemberRole = 'member' | 'organizer'
+export type MemberRole = 'member' | 'organizer' | 'owner'
 
 export interface Household {
   id: string

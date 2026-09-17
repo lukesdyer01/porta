@@ -70,7 +70,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       profile,
       loading,
       pending: Boolean(session) && profileResolved && !profile?.is_active,
-      isOrganizer: profile?.role === 'organizer',
+      // Owner outranks organizer, so everything an organizer can do it can
+      // do too — matching is_organizer() in the database.
+      isOrganizer: profile?.role === 'organizer' || profile?.role === 'owner',
+      isOwner: profile?.role === 'owner',
       refreshProfile: () => loadProfile(session?.user.id),
       signOut: async () => {
         await supabase.auth.signOut()

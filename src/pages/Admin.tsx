@@ -28,7 +28,7 @@ function useMembers() {
 
 export default function Admin() {
   usePageTitle('Members')
-  const { isOrganizer, profile } = useAuth()
+  const { isOrganizer, isOwner, profile } = useAuth()
   const qc = useQueryClient()
   const { data: members = [], isLoading, error } = useMembers()
   const { data: households = [] } = useHouseholds()
@@ -132,11 +132,12 @@ export default function Admin() {
       <h2 className="font-display text-2xl font-semibold">Members</h2>
       <p className="mt-1 text-sm text-[color:var(--text-muted)]">
         Anyone on this list can sign in. Everyone else is turned away.
+        {!isOwner && ' Roles, people\u2019s details and households are managed by the owner.'}
       </p>
 
       <InviteCodes onError={setProblem} />
 
-      <Households onError={setProblem} />
+      {isOwner && <Households onError={setProblem} />}
 
       {/* ---- invite ---- */}
       <section className="mt-6 rounded-xl border border-[color:var(--border)] bg-[color:var(--surface-raised)] p-5">
@@ -231,7 +232,9 @@ export default function Admin() {
         <ul className="mt-3 divide-y divide-[color:var(--border)] rounded-xl border border-[color:var(--border)] bg-[color:var(--surface-raised)]">
           {members.map((m) => {
             const isYou = m.email === profile?.email
-            const organizer = (m.profile_role ?? m.invited_role) === 'organizer'
+            const role = m.profile_role ?? m.invited_role
+            const organizer = role === 'organizer' || role === 'owner'
+            const owner = role === 'owner'
 
             if (editing === m.email && m.profile_id) {
               return (
@@ -297,8 +300,13 @@ export default function Admin() {
                     {organizer && (
                       <ShieldCheck
                         className="size-4 shrink-0 text-[color:var(--accent)]"
-                        aria-label="Organizer"
+                        aria-label={owner ? 'Owner' : 'Organizer'}
                       />
+                    )}
+                    {owner && (
+                      <span className="shrink-0 rounded-full bg-[color:var(--accent)]/15 px-2 py-0.5 text-xs font-medium text-[color:var(--accent)]">
+                        owner
+                      </span>
                     )}
                     {isYou && (
                       <span className="shrink-0 text-xs text-[color:var(--text-muted)]">you</span>
@@ -310,7 +318,7 @@ export default function Admin() {
                   </p>
                 </div>
 
-                {m.profile_id && (
+                {isOwner && m.profile_id && (
                   <button
                     onClick={() => {
                       setEditing(m.email)
@@ -325,18 +333,20 @@ export default function Admin() {
                   </button>
                 )}
 
-                <button
-                  onClick={() =>
-                    setRole.mutate({
-                      email: m.email,
-                      role: organizer ? 'member' : 'organizer',
-                    })
-                  }
-                  disabled={busy}
-                  className="rounded-lg border border-[color:var(--border)] px-3 py-1.5 text-sm transition hover:bg-[color:var(--surface-sunk)] disabled:opacity-50"
-                >
-                  {organizer ? 'Make member' : 'Make organizer'}
-                </button>
+                {isOwner && (m.profile_role ?? m.invited_role) !== 'owner' && (
+                  <button
+                    onClick={() =>
+                      setRole.mutate({
+                        email: m.email,
+                        role: organizer ? 'member' : 'organizer',
+                      })
+                    }
+                    disabled={busy}
+                    className="rounded-lg border border-[color:var(--border)] px-3 py-1.5 text-sm transition hover:bg-[color:var(--surface-sunk)] disabled:opacity-50"
+                  >
+                    {organizer ? 'Make member' : 'Make organizer'}
+                  </button>
+                )}
 
                 <button
                   onClick={() => {
