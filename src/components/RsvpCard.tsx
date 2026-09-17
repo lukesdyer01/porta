@@ -28,6 +28,7 @@ export default function RsvpCard({ tripId, past = false }: { tripId: string; pas
   const [error, setError] = useState<string | null>(null)
   const [editing, setEditing] = useState(false)
   const [guestName, setGuestName] = useState('')
+  const [guestNote, setGuestNote] = useState('')
 
   const save = useMutation({
     mutationFn: async (next: RsvpStatus) => {
@@ -81,6 +82,7 @@ export default function RsvpCard({ tripId, past = false }: { tripId: string; pas
         status: 'yes',
         adults: 1,
         kids: 0,
+        notes: guestNote.trim() || null,
         created_by: profile.id,
       })
       if (error) throw new Error(error.message)
@@ -88,6 +90,24 @@ export default function RsvpCard({ tripId, past = false }: { tripId: string; pas
     onSuccess: () => {
       setError(null)
       setGuestName('')
+      setGuestNote('')
+      void qc.invalidateQueries({ queryKey: ['rsvps', tripId] })
+    },
+    onError: (e: Error) => setError(humanizeError(e)),
+  })
+
+  // Notes get corrected more often than they get written — "arrives Thursday"
+  // becomes "arrives Friday" — so they save on blur rather than behind a form.
+  const setGuestNoteOn = useMutation({
+    mutationFn: async (v: { id: string; note: string }) => {
+      const { error } = await supabase
+        .from('rsvps')
+        .update({ notes: v.note.trim() || null })
+        .eq('id', v.id)
+      if (error) throw new Error(error.message)
+    },
+    onSuccess: () => {
+      setError(null)
       void qc.invalidateQueries({ queryKey: ['rsvps', tripId] })
     },
     onError: (e: Error) => setError(humanizeError(e)),
@@ -198,22 +218,42 @@ export default function RsvpCard({ tripId, past = false }: { tripId: string; pas
         )}
 
         {going.some((r) => !r.profile_id) && (
-          <ul className="mt-2 flex flex-wrap gap-2">
+          <ul className="mt-3 space-y-2">
             {going
               .filter((r) => !r.profile_id)
               .map((r) => (
                 <li
                   key={r.id}
-                  className="flex items-center gap-1.5 rounded-full bg-[color:var(--surface-sunk)] px-2.5 py-1 text-sm"
+                  className="flex flex-wrap items-center gap-x-2 gap-y-1 rounded-lg bg-[color:var(--surface-sunk)] px-3 py-2"
                 >
-                  {name(r)}
+                  <span className="text-sm font-medium">{name(r)}</span>
                   <span className="text-xs text-[color:var(--text-muted)]">guest</span>
+
+                  {isOwner && !past ? (
+                    <input
+                      defaultValue={r.notes ?? ''}
+                      placeholder="Add a note"
+                      aria-label={`Note about ${name(r)}`}
+                      onBlur={(e) => {
+                        if (e.target.value !== (r.notes ?? ''))
+                          setGuestNoteOn.mutate({ id: r.id, note: e.target.value })
+                      }}
+                      className="min-w-32 flex-1 rounded-md border border-transparent bg-transparent px-2 py-0.5 text-sm hover:border-[color:var(--border)] focus:border-[color:var(--accent)] focus:bg-[color:var(--surface)] focus:outline-none"
+                    />
+                  ) : (
+                    r.notes && (
+                      <span className="min-w-32 flex-1 text-sm text-[color:var(--text-muted)] italic">
+                        {r.notes}
+                      </span>
+                    )
+                  )}
+
                   {isOwner && !past && (
                     <button
                       type="button"
                       onClick={() => removeGuest.mutate(r.id)}
                       aria-label={`Remove ${name(r)}`}
-                      className="text-[color:var(--text-muted)] hover:text-[color:var(--text)]"
+                      className="ml-auto text-[color:var(--text-muted)] hover:text-[color:var(--text)]"
                     >
                       <X className="size-3.5" aria-hidden="true" />
                     </button>
@@ -237,7 +277,14 @@ export default function RsvpCard({ tripId, past = false }: { tripId: string; pas
               onChange={(e) => setGuestName(e.target.value)}
               placeholder="Someone without an account, e.g. Grandma"
               aria-label="Add a guest"
-              className="min-w-48 flex-1 rounded-lg border border-[color:var(--border)] bg-[color:var(--surface)] px-3 py-2 text-sm outline-none focus:border-[color:var(--accent)]"
+              className="min-w-44 flex-1 rounded-lg border border-[color:var(--border)] bg-[color:var(--surface)] px-3 py-2 text-sm outline-none focus:border-[color:var(--accent)]"
+            />
+            <input
+              value={guestNote}
+              onChange={(e) => setGuestNote(e.target.value)}
+              placeholder="Note (optional) — e.g. arrives Thursday"
+              aria-label="Note about this guest"
+              className="min-w-44 flex-1 rounded-lg border border-[color:var(--border)] bg-[color:var(--surface)] px-3 py-2 text-sm outline-none focus:border-[color:var(--accent)]"
             />
             <button
               type="submit"
