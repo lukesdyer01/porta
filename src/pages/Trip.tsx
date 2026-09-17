@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../auth/useAuth'
 import DeleteTrip from '../components/DeleteTrip'
 import HouseForm from '../components/HouseForm'
-import HousePhoto from '../components/HousePhoto'
+import HouseGallery from '../components/HouseGallery'
 import HouseReviews from '../components/HouseReviews'
 import HouseInfoPanel from '../components/HouseInfoPanel'
 import RsvpCard from '../components/RsvpCard'
@@ -154,7 +154,7 @@ export default function Trip() {
           </div>
         ) : house ? (
           <div className="mt-3 rounded-xl border border-[color:var(--border)] bg-[color:var(--surface-raised)] p-5">
-            <HousePhoto houseId={house.id} tripId={trip.id} />
+            <HouseGallery houseId={house.id} tripId={trip.id} />
             {house.name && <p className="font-display text-lg font-semibold">{house.name}</p>}
 
             {house.address_line1 && (
