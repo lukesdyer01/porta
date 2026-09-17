@@ -1,5 +1,6 @@
 import { CloudRain, Waves } from 'lucide-react'
 import { useTides, useWeather } from '../lib/conditions'
+import { localToday } from '../lib/countdown'
 import { dayLabel } from '../lib/trips'
 import type { House, Trip } from '../lib/types'
 import CollapsibleCard from './CollapsibleCard'
@@ -13,16 +14,26 @@ const hhmm = (t: string) => {
 }
 
 export default function TripConditions({ trip, house }: { trip: Trip; house?: House | null }) {
+  // Once a trip is under way its earlier days are history. Asking only from
+  // today also stops both fetches hauling back days nobody will look at.
+  const today = localToday()
+  const hasRange = Boolean(trip.start_date && trip.end_date && trip.end_date >= today)
+  const from = hasRange ? (trip.start_date! > today ? trip.start_date! : today) : null
+  const to = hasRange ? trip.end_date : null
 
   const { data: weather = [] } = useWeather(
-    trip.start_date,
-    trip.end_date,
+    from,
+    to,
     house?.lat ?? undefined,
     house?.lng ?? undefined,
   )
-  const { data: tides = {} } = useTides(trip.start_date, trip.end_date)
+  const { data: tides = {} } = useTides(from, to)
 
-  const days = [...new Set([...weather.map((w) => w.date), ...Object.keys(tides)])].sort()
+  // Belt and braces: a free service is at liberty to return a wider range
+  // than it was asked for.
+  const days = [...new Set([...weather.map((w) => w.date), ...Object.keys(tides)])]
+    .filter((d) => d >= today)
+    .sort()
 
   // Both feeds are somebody else's service. Nothing to show is not an error
   // worth putting on screen — it is just a quiet gap.
