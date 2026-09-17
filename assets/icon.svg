@@ -1,0 +1,50 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%"   stop-color="#F6A66B"/>
+      <stop offset="55%"  stop-color="#F08A55"/>
+      <stop offset="100%" stop-color="#E4694A"/>
+    </linearGradient>
+    <linearGradient id="sea" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%"   stop-color="#1F8F89"/>
+      <stop offset="100%" stop-color="#0D4A48"/>
+    </linearGradient>
+    <linearGradient id="sun" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%"   stop-color="#FFF6DD"/>
+      <stop offset="100%" stop-color="#FFD88A"/>
+    </linearGradient>
+    <!-- The reflection has to fade out, or it reads as a post standing in the water. -->
+    <linearGradient id="glint" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%"   stop-color="#FFE3A6" stop-opacity=".55"/>
+      <stop offset="60%"  stop-color="#FFE3A6" stop-opacity=".16"/>
+      <stop offset="100%" stop-color="#FFE3A6" stop-opacity="0"/>
+    </linearGradient>
+    <clipPath id="skyClip"><rect x="0" y="0" width="1024" height="624"/></clipPath>
+    <clipPath id="seaClip"><rect x="0" y="624" width="1024" height="400"/></clipPath>
+    <!-- Bands must be cut to the sun's disc, not run across the whole sky. -->
+    <clipPath id="sunClip"><circle cx="512" cy="566" r="196"/></clipPath>
+  </defs>
+
+  <rect width="1024" height="624" fill="url(#sky)"/>
+
+  <g clip-path="url(#skyClip)">
+    <circle cx="512" cy="566" r="196" fill="url(#sun)"/>
+    <g clip-path="url(#sunClip)">
+      <rect x="300" y="468" width="424" height="16" fill="#F08A55" opacity=".26"/>
+      <rect x="300" y="530" width="424" height="20" fill="#F08A55" opacity=".22"/>
+    </g>
+  </g>
+
+  <rect x="0" y="624" width="1024" height="400" fill="url(#sea)"/>
+
+  <g clip-path="url(#seaClip)">
+    <!-- fans out and fades, the way a low sun scatters on water -->
+    <path d="M470 624 h84 l86 400 h-256 z" fill="url(#glint)"/>
+    <path d="M-40 702c86 0 86-34 172-34s86 34 172 34 86-34 172-34 86 34 172 34 86-34 172-34 86 34 172 34"
+          fill="none" stroke="#9FE0DA" stroke-width="26" stroke-linecap="round" opacity=".85"/>
+    <path d="M-40 806c86 0 86-34 172-34s86 34 172 34 86-34 172-34 86 34 172 34 86-34 172-34 86 34 172 34"
+          fill="none" stroke="#D6F2EE" stroke-width="24" stroke-linecap="round" opacity=".60"/>
+    <path d="M-40 910c86 0 86-34 172-34s86 34 172 34 86-34 172-34 86 34 172 34 86-34 172-34 86 34 172 34"
+          fill="none" stroke="#EAF9F7" stroke-width="22" stroke-linecap="round" opacity=".40"/>
+  </g>
+</svg>
