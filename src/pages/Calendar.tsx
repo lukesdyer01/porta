@@ -1,17 +1,16 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { CalendarDays, MapPin, Plus, Trash2 } from 'lucide-react'
+import { CalendarDays, MapPin, Pencil, Plus, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import { useAuth } from '../auth/useAuth'
 import EventComments from '../components/EventComments'
-import { btnGhost, btnPrimary, fieldClass, labelClass } from '../components/TripForm'
+import EventForm from '../components/EventForm'
+import { btnGhost } from '../components/TripForm'
 import { supabase } from '../lib/supabase'
 import { dayLabel, timeLabel, useEvents } from '../lib/trips'
 import type { EventKind, TripEvent } from '../lib/types'
 import { usePageTitle } from '../lib/usePageTitle'
 import { humanizeError } from '../lib/errors'
 import { useTripContext } from '../trip/useTrip'
-
-const KINDS: EventKind[] = ['activity', 'travel', 'birthday', 'reminder', 'chore', 'other']
 
 const KIND_STYLE: Record<EventKind, string> = {
   activity: 'bg-[color:var(--color-gulf-100)] text-[color:var(--color-gulf-700)]',
@@ -24,57 +23,16 @@ const KIND_STYLE: Record<EventKind, string> = {
 
 export default function Calendar() {
   usePageTitle('Calendar')
-  const { profile, isOrganizer } = useAuth()
+  const { isOrganizer } = useAuth()
   const qc = useQueryClient()
   const { trip } = useTripContext()
   const { data: events = [], isLoading } = useEvents(trip?.id)
 
   const [adding, setAdding] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [f, setF] = useState({
-    title: '',
-    event_date: trip?.start_date ?? '',
-    start_time: '',
-    end_time: '',
-    kind: 'activity' as EventKind,
-    location: '',
-    description: '',
-  })
-  const set = (k: keyof typeof f) => (e: { target: { value: string } }) =>
-    setF((p) => ({ ...p, [k]: e.target.value }))
+  const [editingId, setEditingId] = useState<string | null>(null)
 
   const refresh = () => qc.invalidateQueries({ queryKey: ['events', trip?.id] })
-
-  const add = useMutation({
-    mutationFn: async () => {
-      if (!trip || !profile) throw new Error('Not ready.')
-      if (!f.title.trim()) throw new Error('Give it a title.')
-      if (!f.event_date) throw new Error('Pick a date.')
-      if (f.start_time && f.end_time && f.end_time < f.start_time)
-        throw new Error('The end time is before the start time.')
-
-      const { error } = await supabase.from('events').insert({
-        trip_id: trip.id,
-        title: f.title.trim(),
-        event_date: f.event_date,
-        start_time: f.start_time || null,
-        end_time: f.end_time || null,
-        all_day: !f.start_time,
-        kind: f.kind,
-        location: f.location.trim() || null,
-        description: f.description.trim() || null,
-        created_by: profile.id,
-      })
-      if (error) throw new Error(error.message)
-    },
-    onSuccess: () => {
-      setError(null)
-      setAdding(false)
-      setF((p) => ({ ...p, title: '', start_time: '', end_time: '', location: '', description: '' }))
-      void refresh()
-    },
-    onError: (e: Error) => setError(humanizeError(e)),
-  })
 
   const remove = useMutation({
     mutationFn: async (id: string) => {
@@ -116,58 +74,11 @@ export default function Calendar() {
 
       {adding && (
         <div className="mt-5 rounded-xl border border-[color:var(--border)] bg-[color:var(--surface-raised)] p-5">
-          <div className="space-y-4">
-            <div>
-              <label htmlFor="etitle" className={labelClass}>What is it?</label>
-              <input id="etitle" value={f.title} onChange={set('title')}
-                placeholder="Deep sea fishing charter" className={`mt-1.5 ${fieldClass}`} />
-            </div>
-            <div className="grid gap-4 sm:grid-cols-3">
-              <div>
-                <label htmlFor="edate" className={labelClass}>Date</label>
-                <input id="edate" type="date" value={f.event_date} onChange={set('event_date')}
-                  className={`mt-1.5 ${fieldClass}`} />
-              </div>
-              <div>
-                <label htmlFor="estart" className={labelClass}>Start</label>
-                <input id="estart" type="time" value={f.start_time} onChange={set('start_time')}
-                  className={`mt-1.5 ${fieldClass}`} />
-              </div>
-              <div>
-                <label htmlFor="eend" className={labelClass}>End</label>
-                <input id="eend" type="time" value={f.end_time} onChange={set('end_time')}
-                  className={`mt-1.5 ${fieldClass}`} />
-              </div>
-            </div>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div>
-                <label htmlFor="ekind" className={labelClass}>Type</label>
-                <select id="ekind" value={f.kind}
-                  onChange={(e) => setF((p) => ({ ...p, kind: e.target.value as EventKind }))}
-                  className={`mt-1.5 ${fieldClass}`}>
-                  {KINDS.map((k) => (
-                    <option key={k} value={k}>{k[0].toUpperCase() + k.slice(1)}</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label htmlFor="eloc" className={labelClass}>Where</label>
-                <input id="eloc" value={f.location} onChange={set('location')}
-                  placeholder="Fisherman's Wharf" className={`mt-1.5 ${fieldClass}`} />
-              </div>
-            </div>
-            <div>
-              <label htmlFor="edesc" className={labelClass}>Notes</label>
-              <textarea id="edesc" rows={2} value={f.description} onChange={set('description')}
-                className={`mt-1.5 resize-y ${fieldClass}`} />
-            </div>
-            <div className="flex gap-3">
-              <button onClick={() => add.mutate()} disabled={add.isPending} className={btnPrimary}>
-                {add.isPending ? 'Adding…' : 'Add to the calendar'}
-              </button>
-              <button onClick={() => setAdding(false)} className={btnGhost}>Cancel</button>
-            </div>
-          </div>
+          <EventForm
+            tripId={trip.id}
+            defaultDate={trip.start_date}
+            onDone={() => setAdding(false)}
+          />
         </div>
       )}
 
@@ -191,7 +102,12 @@ export default function Calendar() {
               {dayLabel(d)}
             </h3>
             <ul className="mt-2 divide-y divide-[color:var(--border)] rounded-xl border border-[color:var(--border)] bg-[color:var(--surface-raised)]">
-              {byDay.get(d)!.map((e) => (
+              {byDay.get(d)!.map((e) =>
+                editingId === e.id ? (
+                  <li key={e.id} className="p-4">
+                    <EventForm tripId={trip.id} event={e} onDone={() => setEditingId(null)} />
+                  </li>
+                ) : (
                 <li key={e.id} className="flex flex-wrap items-start gap-x-3 gap-y-1 p-4">
                   <div className="w-20 shrink-0 text-sm text-[color:var(--text-muted)]">
                     {e.all_day || !e.start_time
@@ -219,16 +135,29 @@ export default function Calendar() {
                     <EventComments eventId={e.id} />
                   </div>
                   {isOrganizer && (
-                    <button
-                      onClick={() => { if (confirm(`Remove "${e.title}"?`)) remove.mutate(e.id) }}
-                      aria-label={`Remove ${e.title}`}
-                      className="grid size-8 shrink-0 place-items-center rounded-lg border border-[color:var(--border)] transition hover:bg-[color:var(--surface-sunk)]"
-                    >
-                      <Trash2 className="size-4" aria-hidden="true" />
-                    </button>
+                    <>
+                      <button
+                        onClick={() => {
+                          setAdding(false)
+                          setEditingId(e.id)
+                        }}
+                        aria-label={`Edit ${e.title}`}
+                        className="grid size-8 shrink-0 place-items-center rounded-lg border border-[color:var(--border)] transition hover:bg-[color:var(--surface-sunk)]"
+                      >
+                        <Pencil className="size-4" aria-hidden="true" />
+                      </button>
+                      <button
+                        onClick={() => { if (confirm(`Remove "${e.title}"?`)) remove.mutate(e.id) }}
+                        aria-label={`Remove ${e.title}`}
+                        className="grid size-8 shrink-0 place-items-center rounded-lg border border-[color:var(--border)] transition hover:bg-[color:var(--surface-sunk)]"
+                      >
+                        <Trash2 className="size-4" aria-hidden="true" />
+                      </button>
+                    </>
                   )}
                 </li>
-              ))}
+                ),
+              )}
             </ul>
           </section>
         ))}

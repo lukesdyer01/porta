@@ -2,6 +2,7 @@ import { ExternalLink, Home as HomeIcon, MapPin, Pencil, Plus } from 'lucide-rea
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../auth/useAuth'
+import DeleteTrip from '../components/DeleteTrip'
 import HouseForm from '../components/HouseForm'
 import HousePhoto from '../components/HousePhoto'
 import HouseReviews from '../components/HouseReviews'
@@ -254,6 +255,8 @@ export default function Trip() {
           <HouseReviews houseId={house.id} />
         </div>
       )}
+
+      {isOrganizer && <DeleteTrip trip={trip} />}
     </div>
   )
 }
