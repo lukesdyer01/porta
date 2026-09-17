@@ -24,7 +24,9 @@ export interface AdminMember {
   invited_role: MemberRole
   invited_at: string
   profile_id: string | null
+  full_name: string | null
   display_name: string | null
+  household_id: string | null
   profile_role: MemberRole | null
   is_active: boolean
   household_name: string | null

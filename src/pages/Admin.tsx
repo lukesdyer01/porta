@@ -1,11 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Check, ShieldCheck, Trash2, UserPlus } from 'lucide-react'
+import { Check, Pencil, ShieldCheck, Trash2, UserPlus, X } from 'lucide-react'
 import { useState } from 'react'
 import { useAuth } from '../auth/useAuth'
 import Households from '../components/Households'
 import InviteCodes from '../components/InviteCodes'
 import { parseEmails } from '../lib/parseEmails'
 import { supabase } from '../lib/supabase'
+import { useHouseholds } from '../lib/trips'
 import type { AddMembersResult, AdminMember } from '../lib/types'
 import { usePageTitle } from '../lib/usePageTitle'
 import { humanizeError } from '../lib/errors'
@@ -30,6 +31,10 @@ export default function Admin() {
   const { isOrganizer, profile } = useAuth()
   const qc = useQueryClient()
   const { data: members = [], isLoading, error } = useMembers()
+  const { data: households = [] } = useHouseholds()
+  const [editing, setEditing] = useState<string | null>(null)
+  const [draftName, setDraftName] = useState('')
+  const [draftHousehold, setDraftHousehold] = useState('')
 
   const [paste, setPaste] = useState('')
   const [asOrganizer, setAsOrganizer] = useState(false)
@@ -76,6 +81,27 @@ export default function Admin() {
     onError: (e: Error) => setProblem(humanizeError(e)),
   })
 
+  // People fill in their own name and household, and some never do — leaving
+  // an email prefix on the roster and nobody able to claim a dinner night.
+  const saveProfile = useMutation({
+    mutationFn: async (v: { profileId: string; name: string; householdId: string }) => {
+      const { error } = await supabase.rpc('admin_update_profile', {
+        target_id: v.profileId,
+        new_full_name: v.name.trim(),
+        new_household: v.householdId || null,
+      })
+      if (error) throw new Error(error.message)
+    },
+    onSuccess: () => {
+      setProblem(null)
+      setEditing(null)
+      void refresh()
+      void qc.invalidateQueries({ queryKey: ['members'] })
+      void qc.invalidateQueries({ queryKey: ['households'] })
+    },
+    onError: (e: Error) => setProblem(humanizeError(e)),
+  })
+
   const remove = useMutation({
     mutationFn: async (email: string) => {
       const { error } = await supabase.from('allowed_emails').delete().eq('email', email)
@@ -99,7 +125,7 @@ export default function Admin() {
     )
   }
 
-  const busy = invite.isPending || setRole.isPending || remove.isPending
+  const busy = invite.isPending || setRole.isPending || remove.isPending || saveProfile.isPending
 
   return (
     <div className="max-w-3xl">
@@ -207,6 +233,62 @@ export default function Admin() {
             const isYou = m.email === profile?.email
             const organizer = (m.profile_role ?? m.invited_role) === 'organizer'
 
+            if (editing === m.email && m.profile_id) {
+              return (
+                <li key={m.email} className="space-y-3 p-4">
+                  <p className="text-sm text-[color:var(--text-muted)]">{m.email}</p>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <div>
+                      <label htmlFor={`n-${m.email}`} className="block text-sm font-medium">Name</label>
+                      <input
+                        id={`n-${m.email}`}
+                        value={draftName}
+                        onChange={(e) => setDraftName(e.target.value)}
+                        placeholder="Their name"
+                        className="mt-1.5 w-full rounded-lg border border-[color:var(--border)] bg-[color:var(--surface)] px-3 py-2 text-base outline-none focus:border-[color:var(--accent)]"
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor={`h-${m.email}`} className="block text-sm font-medium">Household</label>
+                      <select
+                        id={`h-${m.email}`}
+                        value={draftHousehold}
+                        onChange={(e) => setDraftHousehold(e.target.value)}
+                        className="mt-1.5 w-full rounded-lg border border-[color:var(--border)] bg-[color:var(--surface)] px-3 py-2 text-base outline-none focus:border-[color:var(--accent)]"
+                      >
+                        <option value="">No household</option>
+                        {households.map((h) => (
+                          <option key={h.id} value={h.id}>{h.name}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-3">
+                    <button
+                      onClick={() =>
+                        saveProfile.mutate({
+                          profileId: m.profile_id!,
+                          name: draftName,
+                          householdId: draftHousehold,
+                        })
+                      }
+                      disabled={busy}
+                      className="rounded-lg bg-[color:var(--accent)] px-4 py-2 font-medium text-[color:var(--accent-contrast)] transition hover:opacity-90 disabled:opacity-50"
+                    >
+                      {saveProfile.isPending ? 'Saving…' : 'Save'}
+                    </button>
+                    <button
+                      onClick={() => setEditing(null)}
+                      className="flex items-center gap-1.5 text-sm text-[color:var(--text-muted)] underline underline-offset-4"
+                    >
+                      <X className="size-3.5" aria-hidden="true" />
+                      Cancel
+                    </button>
+                  </div>
+                </li>
+              )
+            }
+
             return (
               <li key={m.email} className="flex flex-wrap items-center gap-x-3 gap-y-2 p-4">
                 <div className="min-w-0 flex-1">
@@ -227,6 +309,21 @@ export default function Admin() {
                     {m.has_signed_in ? (m.household_name ?? 'No household yet') : 'Not signed in yet'}
                   </p>
                 </div>
+
+                {m.profile_id && (
+                  <button
+                    onClick={() => {
+                      setEditing(m.email)
+                      setDraftName(m.full_name ?? '')
+                      setDraftHousehold(m.household_id ?? '')
+                    }}
+                    disabled={busy}
+                    aria-label={`Edit ${m.display_name || m.email}`}
+                    className="grid size-8 shrink-0 place-items-center rounded-lg border border-[color:var(--border)] transition hover:bg-[color:var(--surface-sunk)] disabled:opacity-50"
+                  >
+                    <Pencil className="size-4" aria-hidden="true" />
+                  </button>
+                )}
 
                 <button
                   onClick={() =>
