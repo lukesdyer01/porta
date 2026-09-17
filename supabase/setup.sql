@@ -934,5 +934,7 @@ revoke execute on function public.hook_restrict_signup(jsonb) from authenticated
 -- (skipped 994_cleanup_local.sql — local bootstrap, not shared)
 -- (skipped 995_seed_code_local.sql — local bootstrap, not shared)
 -- (skipped 996_cleanup_local.sql — local bootstrap, not shared)
+-- (skipped 9962_local.sql — local bootstrap, not shared)
+-- (skipped 9963_local.sql — local bootstrap, not shared)
 -- (skipped 997_switch_email_local.sql — local bootstrap, not shared)
 -- (skipped 998_organizer_local.sql — local bootstrap, not shared)

@@ -23,10 +23,10 @@ security**, with no server to catch a mistake. Two consequences:
 
 1. No codes, addresses, passwords, or personal details belong in this repo. They live in
    the database, behind a login.
-2. Sign-up needs either an invited email address or the shared family code, and redeeming
-   the code adds that address to the allowlist so access stays individually revocable.
-   Because any signed-in member can read the house's gate and wifi codes, **who can sign up
-   _is_ the security boundary** — so the code must not be guessable from the site itself.
+2. Registration is email + password + a shared family code, checked by a database hook
+   before the account is created. Redeeming the code adds that address to the allowlist, so
+   access stays individually revocable. Because any signed-in member can read the house's
+   gate and wifi codes, **who can register _is_ the security boundary**.
 
 ## Local development
 

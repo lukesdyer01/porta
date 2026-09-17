@@ -24,33 +24,22 @@ Supabase CLI:
 
 ## Still to do
 
-### Send sign-in emails through Resend — required, not optional
+### Send emails through Resend — optional now
 
-Two reasons, and the second is a hard blocker:
+Sign-in no longer uses email at all: people register with an email, a password and the
+family code, and a session is issued immediately. Nothing is emailed, so nothing can fail
+to arrive.
 
-1. Supabase's built-in sender is throttled to a couple of messages per hour across the
-   whole project. Fine for testing alone; it fails the week twelve people sign in.
-2. **Free projects on the default mail provider cannot customise email templates.** The
-   stock template contains only a link, never the 6-digit code. So the code-based sign-in
-   can't work until custom SMTP is on. The templates are already written
-   (`supabase/templates/`) and configured in `config.toml` — they apply the moment SMTP is
-   enabled and you run `supabase config push`.
-
-Until then, sign in by tapping the link in the email, in the same browser you requested it
-from.
+Resend is still worth setting up eventually, for password resets and any future
+notifications. Until then, password resets will not work.
 
 1. Sign up at [resend.com](https://resend.com) — free tier is 3,000/month.
-2. Verify a sending domain (or start with their test sender).
-3. Supabase dashboard → **Project Settings → Authentication → SMTP Settings**:
-   - Host `smtp.resend.com`, port `465`, username `resend`, password = your Resend API key
-   - Set sender name and address
-4. **Uncomment the two `[auth.email.template.*]` blocks in `supabase/config.toml`**, then
-   run `supabase config push`. This applies the code-first email templates and the 60/hour
-   rate limit, both currently blocked by the free default provider.
+2. Supabase dashboard → **Project Settings → Authentication → SMTP Settings**:
+   host `smtp.resend.com`, port `465`, username `resend`, password = your Resend API key.
+3. Uncomment the two `[auth.email.template.*]` blocks in `supabase/config.toml` and run
+   `supabase config push`. They are commented out because a free project rejects template
+   changes, and that rejection fails the entire auth config push.
 
-   They are commented out on purpose: a free project rejects any template change, and that
-   rejection fails the *entire* auth config push — so leaving them in would block unrelated
-   settings like redirect URLs from ever updating.
 
 ## Inviting the rest of the family
 
