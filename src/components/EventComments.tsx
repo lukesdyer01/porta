@@ -90,7 +90,7 @@ export default function EventComments({ eventId }: { eventId: string }) {
   })
 
   return (
-    <div className="mt-2 w-full">
+    <div className="mt-3 w-full">
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
@@ -125,7 +125,7 @@ export default function EventComments({ eventId }: { eventId: string }) {
                           if (confirm('Delete this comment?')) remove.mutate(c.id)
                         }}
                         aria-label="Delete comment"
-                        className="ml-auto text-[color:var(--text-muted)] hover:text-[color:var(--text)]"
+                        className="ml-auto grid size-7 shrink-0 place-items-center rounded text-[color:var(--text-muted)] hover:bg-[color:var(--surface-sunk)] hover:text-[color:var(--text)]"
                       >
                         <Trash2 className="size-3.5" aria-hidden="true" />
                       </button>
@@ -142,21 +142,30 @@ export default function EventComments({ eventId }: { eventId: string }) {
               e.preventDefault()
               post.mutate()
             }}
-            className="mt-3 flex gap-2"
+            className="mt-3 flex items-end gap-2"
           >
-            <input
+            <textarea
               value={body}
               onChange={(e) => setBody(e.target.value)}
               maxLength={2000}
+              rows={2}
               placeholder="Add a comment…"
               aria-label="Add a comment"
-              className="min-w-0 flex-1 rounded-lg border border-[color:var(--border)] bg-[color:var(--surface-raised)] px-3 py-2 text-sm outline-none focus:border-[color:var(--accent)]"
+              onKeyDown={(e) => {
+                // Enter sends, shift+enter makes a new line — the behaviour
+                // people already expect from every messaging app.
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault()
+                  if (body.trim()) post.mutate()
+                }
+              }}
+              className="min-w-0 flex-1 resize-y rounded-lg border border-[color:var(--border)] bg-[color:var(--surface-raised)] px-3 py-2 text-sm outline-none focus:border-[color:var(--accent)]"
             />
             <button
               type="submit"
               disabled={post.isPending || !body.trim()}
               aria-label="Post comment"
-              className="grid size-9 shrink-0 place-items-center rounded-lg bg-[color:var(--accent)] text-[color:var(--accent-contrast)] transition hover:opacity-90 disabled:opacity-50"
+              className="grid size-10 shrink-0 place-items-center rounded-lg bg-[color:var(--accent)] text-[color:var(--accent-contrast)] transition hover:opacity-90 disabled:opacity-50"
             >
               <Send className="size-4" aria-hidden="true" />
             </button>

@@ -113,3 +113,13 @@ body {
     scroll-behavior: auto !important;
   }
 }
+
+/* iOS Safari zooms the whole page when you focus a field smaller than 16px,
+   which made half the app lurch on every tap. Lift only the small ones on
+   touch devices — the larger fields (the sign-in code box) keep their size. */
+@media (pointer: coarse) {
+  :where(input, textarea, select).text-sm,
+  :where(input, textarea, select).text-xs {
+    font-size: 1rem;
+  }
+}

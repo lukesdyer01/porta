@@ -108,53 +108,60 @@ export default function Calendar() {
                     <EventForm tripId={trip.id} event={e} onDone={() => setEditingId(null)} />
                   </li>
                 ) : (
-                <li key={e.id} className="flex flex-wrap items-start gap-x-3 gap-y-1 p-4">
-                  <div className="w-20 shrink-0 text-sm text-[color:var(--text-muted)]">
-                    {e.all_day || !e.start_time
-                      ? 'All day'
-                      : `${timeLabel(e.start_time)}${e.end_time ? `–${timeLabel(e.end_time)}` : ''}`}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="flex flex-wrap items-center gap-2 font-medium">
-                      {e.title}
-                      <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${KIND_STYLE[e.kind]}`}>
-                        {e.kind}
-                      </span>
-                    </p>
-                    {e.location && (
-                      <p className="mt-0.5 flex items-center gap-1 text-sm text-[color:var(--text-muted)]">
-                        <MapPin className="size-3.5 shrink-0" aria-hidden="true" />
-                        {e.location}
+                <li key={e.id} className="p-4">
+                  {/* The comment thread is a sibling of this row rather than a
+                      child of the text column. Nested inside it, the reply box
+                      was sharing about 180px with a send button on a phone. */}
+                  <div className="flex items-start gap-3">
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs font-medium tracking-wide text-[color:var(--text-muted)] uppercase">
+                        {e.all_day || !e.start_time
+                          ? 'All day'
+                          : `${timeLabel(e.start_time)}${e.end_time ? `–${timeLabel(e.end_time)}` : ''}`}
                       </p>
-                    )}
-                    {e.description && (
-                      <p className="mt-1 text-sm whitespace-pre-wrap text-[color:var(--text-muted)]">
-                        {e.description}
+                      <p className="mt-0.5 flex flex-wrap items-center gap-2 font-medium">
+                        {e.title}
+                        <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${KIND_STYLE[e.kind]}`}>
+                          {e.kind}
+                        </span>
                       </p>
+                      {e.location && (
+                        <p className="mt-0.5 flex items-center gap-1 text-sm text-[color:var(--text-muted)]">
+                          <MapPin className="size-3.5 shrink-0" aria-hidden="true" />
+                          {e.location}
+                        </p>
+                      )}
+                      {e.description && (
+                        <p className="mt-1 text-sm whitespace-pre-wrap text-[color:var(--text-muted)]">
+                          {e.description}
+                        </p>
+                      )}
+                    </div>
+
+                    {isOrganizer && (
+                      <div className="flex shrink-0 gap-2">
+                        <button
+                          onClick={() => {
+                            setAdding(false)
+                            setEditingId(e.id)
+                          }}
+                          aria-label={`Edit ${e.title}`}
+                          className="grid size-8 place-items-center rounded-lg border border-[color:var(--border)] transition hover:bg-[color:var(--surface-sunk)]"
+                        >
+                          <Pencil className="size-4" aria-hidden="true" />
+                        </button>
+                        <button
+                          onClick={() => { if (confirm(`Remove "${e.title}"?`)) remove.mutate(e.id) }}
+                          aria-label={`Remove ${e.title}`}
+                          className="grid size-8 place-items-center rounded-lg border border-[color:var(--border)] transition hover:bg-[color:var(--surface-sunk)]"
+                        >
+                          <Trash2 className="size-4" aria-hidden="true" />
+                        </button>
+                      </div>
                     )}
-                    <EventComments eventId={e.id} />
                   </div>
-                  {isOrganizer && (
-                    <>
-                      <button
-                        onClick={() => {
-                          setAdding(false)
-                          setEditingId(e.id)
-                        }}
-                        aria-label={`Edit ${e.title}`}
-                        className="grid size-8 shrink-0 place-items-center rounded-lg border border-[color:var(--border)] transition hover:bg-[color:var(--surface-sunk)]"
-                      >
-                        <Pencil className="size-4" aria-hidden="true" />
-                      </button>
-                      <button
-                        onClick={() => { if (confirm(`Remove "${e.title}"?`)) remove.mutate(e.id) }}
-                        aria-label={`Remove ${e.title}`}
-                        className="grid size-8 shrink-0 place-items-center rounded-lg border border-[color:var(--border)] transition hover:bg-[color:var(--surface-sunk)]"
-                      >
-                        <Trash2 className="size-4" aria-hidden="true" />
-                      </button>
-                    </>
-                  )}
+
+                  <EventComments eventId={e.id} />
                 </li>
                 ),
               )}
