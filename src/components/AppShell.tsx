@@ -10,6 +10,7 @@ const NAV = [
   { to: '/', label: 'Trip', end: true },
   { to: '/meals', label: 'Dinners', end: false },
   { to: '/calendar', label: 'Calendar', end: false },
+  { to: '/expenses', label: 'Money', end: false },
 ]
 const ORGANIZER_NAV = [{ to: '/members', label: 'Members', end: false }]
 

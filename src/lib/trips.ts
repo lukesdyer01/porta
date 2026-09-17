@@ -199,3 +199,79 @@ export const timeLabel = (t: string | null) => {
   d.setHours(h, m, 0, 0)
   return d.toLocaleTimeString('en-US', { hour: 'numeric', minute: m ? '2-digit' : undefined })
 }
+
+export interface Member {
+  id: string
+  display_name: string
+  household_id: string | null
+}
+
+export function useMembers() {
+  return useQuery({
+    queryKey: ['members'],
+    queryFn: async (): Promise<Member[]> => {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id, display_name, household_id')
+        .eq('is_active', true)
+        .order('display_name')
+      if (error) throw new Error(error.message)
+      return (data ?? []) as Member[]
+    },
+  })
+}
+
+export interface ExpenseRow {
+  id: string
+  trip_id: string
+  payer_id: string
+  amount_cents: number
+  category: string
+  description: string
+  incurred_on: string
+  split_method: string
+  receipt_path: string | null
+  payer: { display_name: string } | null
+  expense_splits: { profile_id: string; share_cents: number }[]
+}
+
+export function useExpenses(tripId: string | undefined) {
+  return useQuery({
+    enabled: Boolean(tripId),
+    queryKey: ['expenses', tripId],
+    queryFn: async (): Promise<ExpenseRow[]> => {
+      const { data, error } = await supabase
+        .from('expenses')
+        .select(
+          'id, trip_id, payer_id, amount_cents, category, description, incurred_on, split_method, receipt_path, payer:profiles!expenses_payer_id_fkey(display_name), expense_splits(profile_id, share_cents)',
+        )
+        .eq('trip_id', tripId!)
+        .order('incurred_on', { ascending: false })
+      if (error) throw new Error(error.message)
+      return (data ?? []) as unknown as ExpenseRow[]
+    },
+  })
+}
+
+export interface BalanceRow {
+  trip_id: string
+  profile_id: string
+  paid_cents: number
+  owed_cents: number
+  net_cents: number
+}
+
+export function useBalances(tripId: string | undefined) {
+  return useQuery({
+    enabled: Boolean(tripId),
+    queryKey: ['balances', tripId],
+    queryFn: async (): Promise<BalanceRow[]> => {
+      const { data, error } = await supabase
+        .from('trip_balances')
+        .select('trip_id, profile_id, paid_cents, owed_cents, net_cents')
+        .eq('trip_id', tripId!)
+      if (error) throw new Error(error.message)
+      return (data ?? []) as BalanceRow[]
+    },
+  })
+}

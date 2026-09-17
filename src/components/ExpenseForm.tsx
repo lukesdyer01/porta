@@ -1,0 +1,248 @@
+import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useMemo, useState } from 'react'
+import { useAuth } from '../auth/useAuth'
+import { supabase } from '../lib/supabase'
+import { customSplit, equalSplit, householdSplit, type SplitRow } from '../lib/splits'
+import { money, toCents, useMembers, useRsvps, type Member } from '../lib/trips'
+import { btnGhost, btnPrimary, fieldClass, labelClass } from './TripForm'
+
+type Mode = 'equal' | 'household' | 'custom'
+
+const CATEGORIES = [
+  'house', 'golf_cart', 'groceries', 'dining',
+  'activities', 'travel', 'supplies', 'fuel', 'other',
+] as const
+
+const catLabel = (c: string) => c.replace('_', ' ').replace(/^\w/, (m) => m.toUpperCase())
+
+export default function ExpenseForm({ tripId, onDone }: { tripId: string; onDone: () => void }) {
+  const { profile } = useAuth()
+  const qc = useQueryClient()
+  const { data: members = [] } = useMembers()
+  const { data: rsvps = [] } = useRsvps(tripId)
+
+  const [payer, setPayer] = useState(profile?.id ?? '')
+  const [amount, setAmount] = useState('')
+  const [category, setCategory] = useState<string>('house')
+  const [description, setDescription] = useState('')
+  const [date, setDate] = useState(new Date().toISOString().slice(0, 10))
+  const [mode, setMode] = useState<Mode>('equal')
+  const [picked, setPicked] = useState<Set<string>>(new Set())
+  const [custom, setCustom] = useState<Record<string, string>>({})
+  const [error, setError] = useState<string | null>(null)
+
+  const totalCents = toCents(amount) ?? 0
+  const goingIds = useMemo(
+    () => new Set(rsvps.filter((r) => r.status === 'yes' && r.profile_id).map((r) => r.profile_id!)),
+    [rsvps],
+  )
+
+  // Default to whoever RSVP'd yes — the common case — but never lock it: the
+  // whole point is choosing exactly who a cost lands on.
+  const [seeded, setSeeded] = useState(false)
+  if (!seeded && members.length > 0) {
+    setSeeded(true)
+    setPicked(new Set(goingIds.size > 0 ? [...goingIds] : members.map((m) => m.id)))
+  }
+
+  const chosen = members.filter((m) => picked.has(m.id))
+
+  const splits: SplitRow[] = useMemo(() => {
+    if (chosen.length === 0 || totalCents <= 0) return []
+    if (mode === 'equal') return equalSplit(totalCents, chosen.map((m) => m.id))
+    if (mode === 'household')
+      return householdSplit(
+        totalCents,
+        chosen.map((m) => ({ profileId: m.id, householdId: m.household_id })),
+      )
+    return customSplit(
+      Object.fromEntries(chosen.map((m) => [m.id, toCents(custom[m.id] ?? '') ?? 0])),
+    )
+  }, [chosen, totalCents, mode, custom])
+
+  const splitTotal = splits.reduce((s, r) => s + r.shareCents, 0)
+  const off = totalCents - splitTotal
+
+  const toggle = (id: string) =>
+    setPicked((p) => {
+      const next = new Set(p)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+
+  const save = useMutation({
+    mutationFn: async () => {
+      if (!profile) throw new Error('Not signed in.')
+      if (totalCents <= 0) throw new Error('Enter an amount.')
+      if (!payer) throw new Error('Who paid?')
+      if (splits.length === 0) throw new Error('Choose at least one person to split with.')
+      if (mode === 'custom' && off !== 0)
+        throw new Error(
+          `The shares add up to ${money(splitTotal)}, but the expense is ${money(totalCents)}.`,
+        )
+
+      const { error } = await supabase.rpc('save_expense', {
+        p_expense: {
+          trip_id: tripId,
+          payer_id: payer,
+          amount_cents: totalCents,
+          category,
+          description: description.trim(),
+          incurred_on: date,
+          split_method: mode,
+        },
+        p_splits: splits.map((s) => ({
+          profile_id: s.profileId,
+          share_cents: s.shareCents,
+          weight: s.weight,
+        })),
+      })
+      if (error) throw new Error(error.message)
+    },
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ['expenses', tripId] })
+      void qc.invalidateQueries({ queryKey: ['balances', tripId] })
+      onDone()
+    },
+    onError: (e: Error) => setError(e.message),
+  })
+
+  const shareOf = (m: Member) => splits.find((s) => s.profileId === m.id)?.shareCents ?? 0
+
+  return (
+    <div className="space-y-5">
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div>
+          <label htmlFor="amt" className={labelClass}>Amount</label>
+          <input id="amt" inputMode="decimal" value={amount} onChange={(e) => setAmount(e.target.value)}
+            placeholder="3200.00" className={`mt-1.5 ${fieldClass}`} />
+        </div>
+        <div>
+          <label htmlFor="payer" className={labelClass}>Who paid</label>
+          <select id="payer" value={payer} onChange={(e) => setPayer(e.target.value)}
+            className={`mt-1.5 ${fieldClass}`}>
+            <option value="">Choose…</option>
+            {members.map((m) => (
+              <option key={m.id} value={m.id}>{m.display_name}</option>
+            ))}
+          </select>
+        </div>
+      </div>
+
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div>
+          <label htmlFor="cat" className={labelClass}>Category</label>
+          <select id="cat" value={category} onChange={(e) => setCategory(e.target.value)}
+            className={`mt-1.5 ${fieldClass}`}>
+            {CATEGORIES.map((c) => <option key={c} value={c}>{catLabel(c)}</option>)}
+          </select>
+        </div>
+        <div>
+          <label htmlFor="edate" className={labelClass}>Date</label>
+          <input id="edate" type="date" value={date} onChange={(e) => setDate(e.target.value)}
+            className={`mt-1.5 ${fieldClass}`} />
+        </div>
+      </div>
+
+      <div>
+        <label htmlFor="edesc" className={labelClass}>What was it?</label>
+        <input id="edesc" value={description} onChange={(e) => setDescription(e.target.value)}
+          placeholder="Beach house rental" className={`mt-1.5 ${fieldClass}`} />
+      </div>
+
+      {/* ---- split picker ---- */}
+      <div className="rounded-xl border border-[color:var(--border)] bg-[color:var(--surface)] p-4">
+        <p className={labelClass}>Split between</p>
+
+        <div className="mt-3 grid grid-cols-3 gap-1 rounded-lg bg-[color:var(--surface-sunk)] p-1">
+          {([
+            ['equal', 'Evenly'],
+            ['household', 'Per family'],
+            ['custom', 'Custom'],
+          ] as const).map(([m, label]) => (
+            <button key={m} type="button" onClick={() => setMode(m)}
+              className={`rounded-md px-2 py-1.5 text-sm font-medium transition ${
+                mode === m ? 'bg-[color:var(--surface-raised)] shadow-sm' : 'text-[color:var(--text-muted)]'
+              }`}>
+              {label}
+            </button>
+          ))}
+        </div>
+
+        {mode === 'household' && (
+          <p className="mt-2 text-xs text-[color:var(--text-muted)]">
+            One share per family, however many of them are ticked &mdash; how the house cost
+            actually splits.
+          </p>
+        )}
+
+        <div className="mt-3 flex flex-wrap gap-2 text-xs">
+          <button type="button" onClick={() => setPicked(new Set(members.map((m) => m.id)))}
+            className="rounded-full border border-[color:var(--border)] px-2.5 py-1 hover:bg-[color:var(--surface-sunk)]">
+            Everyone
+          </button>
+          {goingIds.size > 0 && (
+            <button type="button" onClick={() => setPicked(new Set(goingIds))}
+              className="rounded-full border border-[color:var(--border)] px-2.5 py-1 hover:bg-[color:var(--surface-sunk)]">
+              Everyone going
+            </button>
+          )}
+          <button type="button" onClick={() => setPicked(new Set())}
+            className="rounded-full border border-[color:var(--border)] px-2.5 py-1 hover:bg-[color:var(--surface-sunk)]">
+            Nobody
+          </button>
+        </div>
+
+        <ul className="mt-3 divide-y divide-[color:var(--border)]">
+          {members.map((m) => {
+            const on = picked.has(m.id)
+            return (
+              <li key={m.id} className="flex items-center gap-3 py-2">
+                <input type="checkbox" checked={on} onChange={() => toggle(m.id)}
+                  id={`pick-${m.id}`} className="size-4 accent-[color:var(--accent)]" />
+                <label htmlFor={`pick-${m.id}`} className="min-w-0 flex-1 truncate text-sm">
+                  {m.display_name}
+                </label>
+                {on && mode === 'custom' ? (
+                  <input inputMode="decimal" value={custom[m.id] ?? ''}
+                    onChange={(e) => setCustom((p) => ({ ...p, [m.id]: e.target.value }))}
+                    placeholder="0.00"
+                    className="w-24 rounded-md border border-[color:var(--border)] bg-[color:var(--surface-raised)] px-2 py-1 text-right text-sm outline-none focus:border-[color:var(--accent)]" />
+                ) : (
+                  <span className="w-24 text-right font-mono text-sm text-[color:var(--text-muted)]">
+                    {on ? money(shareOf(m)) : '—'}
+                  </span>
+                )}
+              </li>
+            )
+          })}
+        </ul>
+
+        <div className="mt-3 flex items-baseline justify-between border-t border-[color:var(--border)] pt-3 text-sm">
+          <span className="text-[color:var(--text-muted)]">
+            {chosen.length} {chosen.length === 1 ? 'person' : 'people'}
+          </span>
+          <span className={off === 0 ? 'font-medium' : 'font-medium text-[color:var(--color-sunset-600)]'}>
+            {money(splitTotal)}
+            {off !== 0 && totalCents > 0 && ` · ${off > 0 ? money(off) + ' left' : money(-off) + ' over'}`}
+          </span>
+        </div>
+      </div>
+
+      {error && (
+        <p role="alert" className="rounded-lg border border-[color:var(--color-sunset-300)] bg-[color:var(--color-sunset-500)]/10 px-3 py-2 text-sm">
+          {error}
+        </p>
+      )}
+
+      <div className="flex gap-3">
+        <button onClick={() => { setError(null); save.mutate() }} disabled={save.isPending}
+          className={btnPrimary}>
+          {save.isPending ? 'Saving…' : 'Save expense'}
+        </button>
+        <button onClick={onDone} className={btnGhost}>Cancel</button>
+      </div>
+    </div>
+  )
+}

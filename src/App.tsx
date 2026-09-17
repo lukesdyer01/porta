@@ -8,6 +8,7 @@ import Spinner from './components/Spinner'
 import { isConfigured } from './lib/supabase'
 import Admin from './pages/Admin'
 import Calendar from './pages/Calendar'
+import Expenses from './pages/Expenses'
 import Meals from './pages/Meals'
 import Trip from './pages/Trip'
 import NotConfigured from './pages/NotConfigured'
@@ -36,6 +37,8 @@ function Gate() {
         <Route path="meals/:year" element={<Meals />} />
         <Route path="calendar" element={<Calendar />} />
         <Route path="calendar/:year" element={<Calendar />} />
+        <Route path="expenses" element={<Expenses />} />
+        <Route path="expenses/:year" element={<Expenses />} />
         <Route path="profile" element={<Profile />} />
         <Route path="members" element={<Admin />} />
         <Route path="*" element={<Trip />} />
