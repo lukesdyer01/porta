@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { CalendarCheck, Users } from 'lucide-react'
+import { CalendarCheck, Check, Pencil, Users } from 'lucide-react'
 import { useState } from 'react'
 import { useAuth } from '../auth/useAuth'
 import { supabase } from '../lib/supabase'
@@ -14,6 +14,12 @@ const CHOICES: { value: RsvpStatus; label: string }[] = [
   { value: 'no', label: 'Not this year' },
 ]
 
+const ANSWERED: Record<string, string> = {
+  yes: "You're in",
+  maybe: "You're a maybe",
+  no: "You're out this year",
+}
+
 export default function RsvpCard({ tripId, past = false }: { tripId: string; past?: boolean }) {
   const { profile } = useAuth()
   const qc = useQueryClient()
@@ -27,6 +33,9 @@ export default function RsvpCard({ tripId, past = false }: { tripId: string; pas
   const [departure, setDeparture] = useState('')
   const [notes, setNotes] = useState('')
   const [error, setError] = useState<string | null>(null)
+  // Once you've answered, the form collapses to a summary until you ask for
+  // it back — there is nothing left to do with it and it crowds the roster.
+  const [editing, setEditing] = useState(false)
 
   // Seed the form once the saved RSVP arrives. Adjusting during render rather
   // than in an effect: React re-runs this component immediately without
@@ -44,7 +53,7 @@ export default function RsvpCard({ tripId, past = false }: { tripId: string; pas
   }
 
   const save = useMutation({
-    mutationFn: async (next: RsvpStatus) => {
+    mutationFn: async ({ next }: { next: RsvpStatus; done: boolean }) => {
       if (!profile) throw new Error('Not signed in.')
       if (arrival && departure && departure < arrival)
         throw new Error('Your leave date is before your arrive date.')
@@ -75,14 +84,20 @@ export default function RsvpCard({ tripId, past = false }: { tripId: string; pas
         )
       }
     },
-    onSuccess: () => {
+    onSuccess: (_data, v) => {
       setError(null)
       void qc.invalidateQueries({ queryKey: ['rsvps', tripId] })
       // Saying yes unlocks the house codes, so that panel has to refetch.
       void qc.invalidateQueries({ queryKey: ['house-info'] })
+      // Picking "I'm in" still needs headcount and dates, so only collapse
+      // once the answer is actually complete.
+      if (v.done) setEditing(false)
     },
     onError: (e: Error) => setError(humanizeError(e)),
   })
+
+  const answered = Boolean(mine && mine.status !== 'pending')
+  const showForm = !past && (!answered || editing)
 
   const going = rsvps.filter((r) => r.status === 'yes')
   const maybe = rsvps.filter((r) => r.status === 'maybe')
@@ -97,7 +112,30 @@ export default function RsvpCard({ tripId, past = false }: { tripId: string; pas
         {past ? 'Who came' : 'Are you coming?'}
       </h3>
 
-      {!past && (
+      {!past && answered && !editing && (
+        <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 rounded-lg bg-[color:var(--surface-sunk)] px-4 py-3">
+          <Check className="size-4 shrink-0 text-[color:var(--accent)]" aria-hidden="true" />
+          <span className="font-medium">{ANSWERED[mine!.status] ?? 'Answered'}</span>
+          {mine!.status !== 'no' && (
+            <span className="text-sm text-[color:var(--text-muted)]">
+              {mine!.headcount} {mine!.headcount === 1 ? 'person' : 'people'}
+              {dateRange(mine!.arrival_date, mine!.departure_date)
+                ? ` · ${dateRange(mine!.arrival_date, mine!.departure_date)}`
+                : ''}
+            </span>
+          )}
+          <button
+            type="button"
+            onClick={() => setEditing(true)}
+            className="ml-auto flex items-center gap-1.5 text-sm text-[color:var(--text-muted)] underline underline-offset-4 hover:text-[color:var(--text)]"
+          >
+            <Pencil className="size-3.5" aria-hidden="true" />
+            Change
+          </button>
+        </div>
+      )}
+
+      {showForm && (
       <div className="mt-3 flex flex-wrap gap-2">
         {CHOICES.map((c) => {
           const active = status === c.value
@@ -108,7 +146,8 @@ export default function RsvpCard({ tripId, past = false }: { tripId: string; pas
               disabled={save.isPending}
               onClick={() => {
                 setStatus(c.value)
-                save.mutate(c.value)
+                // "Not this year" needs no further detail, so it completes here.
+                save.mutate({ next: c.value, done: c.value === 'no' })
               }}
               className={`rounded-lg border px-4 py-2 text-sm font-medium transition disabled:opacity-50 ${
                 active
@@ -123,7 +162,7 @@ export default function RsvpCard({ tripId, past = false }: { tripId: string; pas
       </div>
       )}
 
-      {!past && status !== 'no' && status !== 'pending' && (
+      {showForm && status !== 'no' && status !== 'pending' && (
         <div className="mt-4 space-y-4">
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
@@ -158,10 +197,25 @@ export default function RsvpCard({ tripId, past = false }: { tripId: string; pas
             <input id="rnotes" value={notes} onChange={(e) => setNotes(e.target.value)}
               placeholder="Driving down Saturday, bringing the smoker" className={`mt-1.5 ${fieldClass}`} />
           </div>
-          <button type="button" onClick={() => save.mutate(status)} disabled={save.isPending}
-            className={btnPrimary}>
-            {save.isPending ? 'Saving…' : 'Save my details'}
-          </button>
+          <div className="flex flex-wrap items-center gap-3">
+            <button
+              type="button"
+              onClick={() => save.mutate({ next: status, done: true })}
+              disabled={save.isPending}
+              className={btnPrimary}
+            >
+              {save.isPending ? 'Saving…' : answered ? 'Save changes' : 'Save my details'}
+            </button>
+            {answered && (
+              <button
+                type="button"
+                onClick={() => setEditing(false)}
+                className="text-sm text-[color:var(--text-muted)] underline underline-offset-4 hover:text-[color:var(--text)]"
+              >
+                Cancel
+              </button>
+            )}
+          </div>
         </div>
       )}
 
