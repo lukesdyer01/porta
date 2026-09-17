@@ -1,6 +1,8 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { useMemo, useState } from 'react'
+import { Paperclip, X } from 'lucide-react'
+import { useMemo, useRef, useState } from 'react'
 import { useAuth } from '../auth/useAuth'
+import { prepareImagePair } from '../lib/images'
 import { supabase } from '../lib/supabase'
 import { customSplit, equalSplit, householdSplit, type SplitRow } from '../lib/splits'
 import { fromCents, money, toCents, useMembers, useRsvps, type ExpenseRow, type Member } from '../lib/trips'
@@ -46,6 +48,30 @@ export default function ExpenseForm({
     ),
   )
   const [error, setError] = useState<string | null>(null)
+  const [receiptPath, setReceiptPath] = useState<string | null>(expense?.receipt_path ?? null)
+  const [uploading, setUploading] = useState(false)
+  const receiptRef = useRef<HTMLInputElement>(null)
+
+  // Goes under trips/, which the existing storage policy already permits, and
+  // through the same downscaling as every other photo — a receipt snapped on a
+  // phone is no smaller than a beach photo.
+  async function attachReceipt(file: File) {
+    setUploading(true)
+    setError(null)
+    try {
+      const { full } = await prepareImagePair(file)
+      const path = `trips/${tripId}/receipts/${crypto.randomUUID()}.${full.ext}`
+      const { error: upErr } = await supabase.storage
+        .from('photos')
+        .upload(path, full.blob, { contentType: full.type })
+      if (upErr) throw new Error(upErr.message)
+      setReceiptPath(path)
+    } catch (e) {
+      setError(humanizeError(e))
+    } finally {
+      setUploading(false)
+    }
+  }
 
   const totalCents = toCents(amount) ?? 0
   const goingIds = useMemo(
@@ -109,6 +135,7 @@ export default function ExpenseForm({
           description: description.trim(),
           incurred_on: date,
           split_method: mode,
+          receipt_path: receiptPath,
         },
         p_splits: splits.map((s) => ({
           profile_id: s.profileId,
@@ -167,6 +194,44 @@ export default function ExpenseForm({
         <label htmlFor="edesc" className={labelClass}>What was it?</label>
         <input id="edesc" value={description} onChange={(e) => setDescription(e.target.value)}
           placeholder="Beach house rental" className={`mt-1.5 ${fieldClass}`} />
+      </div>
+
+      <div>
+        <input
+          ref={receiptRef}
+          type="file"
+          accept="image/*"
+          hidden
+          onChange={(e) => {
+            const file = e.target.files?.[0]
+            e.target.value = ''
+            if (file) void attachReceipt(file)
+          }}
+        />
+        {receiptPath ? (
+          <p className="flex items-center gap-2 text-sm">
+            <Paperclip className="size-4 text-[color:var(--accent)]" aria-hidden="true" />
+            Receipt attached
+            <button
+              type="button"
+              onClick={() => setReceiptPath(null)}
+              aria-label="Remove the receipt"
+              className="text-[color:var(--text-muted)] hover:text-[color:var(--text)]"
+            >
+              <X className="size-3.5" aria-hidden="true" />
+            </button>
+          </p>
+        ) : (
+          <button
+            type="button"
+            onClick={() => receiptRef.current?.click()}
+            disabled={uploading}
+            className="flex items-center gap-1.5 text-sm text-[color:var(--text-muted)] underline underline-offset-4 hover:text-[color:var(--text)] disabled:opacity-50"
+          >
+            <Paperclip className="size-3.5" aria-hidden="true" />
+            {uploading ? 'Attaching…' : 'Attach a receipt'}
+          </button>
+        )}
       </div>
 
       {/* ---- split picker ---- */}

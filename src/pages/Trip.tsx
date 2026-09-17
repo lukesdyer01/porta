@@ -9,6 +9,8 @@ import HouseGallery from '../components/HouseGallery'
 import HouseReviews from '../components/HouseReviews'
 import HouseInfoPanel from '../components/HouseInfoPanel'
 import RsvpCard from '../components/RsvpCard'
+import PackingSummary from '../components/PackingSummary'
+import TripConditions from '../components/TripConditions'
 import TripForm, { btnGhost, btnPrimary } from '../components/TripForm'
 import { dateRange, isPastTrip, money, useHouse } from '../lib/trips'
 import { useTripContext } from '../trip/useTrip'
@@ -136,6 +138,18 @@ export default function Trip() {
           )}
         </div>
       )}
+
+      {/* Only for a trip still ahead or under way: a 2019 forecast means
+          nothing, and past tides are noise. */}
+      {!isPastTrip(trip) && (
+        <div className="mt-6">
+          <TripConditions trip={trip} house={house} />
+        </div>
+      )}
+
+      <div className="mt-6">
+        <PackingSummary tripId={trip.id} year={trip.year} />
+      </div>
 
       {/* ---- rsvp ---- */}
       <div className="mt-8">

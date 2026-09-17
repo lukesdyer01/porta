@@ -1,4 +1,4 @@
-import { BookOpen, LogOut, Map, User, Users, X } from 'lucide-react'
+import { BookOpen, ListChecks, LogOut, Map, User, Users, X } from 'lucide-react'
 import { useEffect } from 'react'
 import { NavLink } from 'react-router-dom'
 import { useAuth } from '../auth/useAuth'
@@ -22,6 +22,7 @@ export default function MoreSheet({ open, onClose }: { open: boolean; onClose: (
 
   const items = [
     { to: linkTo('journal'), label: 'Journal', Icon: BookOpen },
+    { to: linkTo('list'), label: 'Packing & shopping', Icon: ListChecks },
     { to: '/map', label: 'Map', Icon: Map },
     ...(isOrganizer ? [{ to: '/members', label: 'Members', Icon: Users }] : []),
     { to: '/profile', label: 'Your profile', Icon: User },

@@ -151,3 +151,15 @@ export interface Amenity {
   name: string
   sort_order: number
 }
+
+export type ItemKind = 'bring' | 'buy'
+
+export interface TripItem {
+  id: string
+  trip_id: string
+  kind: ItemKind
+  name: string
+  claimed_by: string | null
+  done: boolean
+  claimer: { display_name: string } | null
+}

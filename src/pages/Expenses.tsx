@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { ArrowRight, Pencil, Plus, Receipt, Trash2 } from 'lucide-react'
+import { ArrowRight, Paperclip, Pencil, Plus, Receipt, Trash2 } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { useAuth } from '../auth/useAuth'
 import ExpenseForm from '../components/ExpenseForm'
@@ -23,6 +23,17 @@ export default function Expenses() {
   const [adding, setAdding] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+
+  // The bucket is private, so a receipt needs a signed URL at the moment
+  // somebody actually asks to see it.
+  async function openReceipt(path: string) {
+    const { data, error } = await supabase.storage.from('photos').createSignedUrl(path, 60 * 10)
+    if (error || !data?.signedUrl) {
+      setError('That receipt could not be opened.')
+      return
+    }
+    window.open(data.signedUrl, '_blank', 'noopener')
+  }
 
   const nameOf = useMemo(
     () => (id: string) => members.find((m) => m.id === id)?.display_name ?? 'Someone',
@@ -179,7 +190,16 @@ export default function Expenses() {
                 <li key={e.id} className="flex flex-wrap items-start gap-x-3 gap-y-1 p-4">
                   <div className="min-w-0 flex-1">
                     <p className="font-medium">{e.description || e.category.replace('_', ' ')}</p>
-                    <p className="mt-0.5 text-sm text-[color:var(--text-muted)]">
+                    <p className="mt-0.5 flex flex-wrap items-center gap-x-1 text-sm text-[color:var(--text-muted)]">
+                      {e.receipt_path && (
+                        <button
+                          onClick={() => void openReceipt(e.receipt_path!)}
+                          className="mr-1 inline-flex items-center gap-1 text-[color:var(--accent)] hover:underline"
+                        >
+                          <Paperclip className="size-3.5" aria-hidden="true" />
+                          receipt
+                        </button>
+                      )}
                       {e.payer?.display_name ?? 'Someone'} paid · {e.incurred_on} ·{' '}
                       {e.expense_splits.length} way{e.expense_splits.length === 1 ? '' : 's'}
                       {myShare ? ` · your share ${money(myShare.share_cents)}` : ' · not your share'}

@@ -35,6 +35,7 @@ export default function Gallery() {
   const [progress, setProgress] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [open, setOpen] = useState<Shot | null>(null)
+  const [caption, setCaption] = useState('')
 
   const { data: shots = [], isLoading } = useQuery({
     enabled: Boolean(trip?.id),
@@ -130,6 +131,21 @@ export default function Gallery() {
     },
   })
 
+  const saveCaption = useMutation({
+    mutationFn: async (v: { id: string; caption: string }) => {
+      const { error } = await supabase
+        .from('photos')
+        .update({ caption: v.caption.trim() || null })
+        .eq('id', v.id)
+      if (error) throw new Error(error.message)
+    },
+    onSuccess: () => {
+      setError(null)
+      void qc.invalidateQueries({ queryKey: ['gallery', trip?.id] })
+    },
+    onError: (e: Error) => setError(humanizeError(e)),
+  })
+
   const remove = useMutation({
     mutationFn: async (s: Shot) => {
       const { error } = await supabase.from('photos').delete().eq('id', s.id)
@@ -194,7 +210,10 @@ export default function Gallery() {
         {shots.map((s) => (
           <li key={s.id}>
             <button
-              onClick={() => setOpen(s)}
+              onClick={() => {
+                setOpen(s)
+                setCaption(s.caption ?? '')
+              }}
               className="block w-full overflow-hidden rounded-lg"
               aria-label={s.caption ?? 'Open photo'}
             >
@@ -232,6 +251,28 @@ export default function Gallery() {
           >
             <X className="size-5" aria-hidden="true" />
           </button>
+          {/* Only the uploader or an organizer writes it; everyone reads it. */}
+          {isOrganizer || open.uploaded_by === profile?.id ? (
+            <input
+              value={caption}
+              onChange={(e) => setCaption(e.target.value)}
+              onClick={(e) => e.stopPropagation()}
+              onBlur={() => {
+                if (caption !== (open.caption ?? ''))
+                  saveCaption.mutate({ id: open.id, caption })
+              }}
+              placeholder="Add a caption — who, where, what happened"
+              aria-label="Photo caption"
+              className="absolute inset-x-4 bottom-20 mx-auto max-w-md rounded-lg border border-white/25 bg-black/40 px-3 py-2 text-sm text-white backdrop-blur placeholder:text-white/50 focus:border-white/60 focus:outline-none"
+            />
+          ) : (
+            open.caption && (
+              <p className="absolute inset-x-4 bottom-20 mx-auto max-w-md rounded-lg bg-black/40 px-3 py-2 text-center text-sm text-white backdrop-blur">
+                {open.caption}
+              </p>
+            )
+          )}
+
           {(isOrganizer || open.uploaded_by === profile?.id) && (
             <button
               onClick={(e) => {

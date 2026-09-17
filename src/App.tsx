@@ -13,6 +13,7 @@ import Calendar from './pages/Calendar'
 import Expenses from './pages/Expenses'
 import Gallery from './pages/Gallery'
 import Journal from './pages/Journal'
+import PackingList from './pages/PackingList'
 import Meals from './pages/Meals'
 import Trip from './pages/Trip'
 import Trips from './pages/Trips'
@@ -56,6 +57,8 @@ function Gate() {
           <Route path="photos/:year" element={<Gallery />} />
           <Route path="journal" element={<Journal />} />
           <Route path="journal/:year" element={<Journal />} />
+          <Route path="list" element={<PackingList />} />
+          <Route path="list/:year" element={<PackingList />} />
           <Route
             path="map"
             element={
