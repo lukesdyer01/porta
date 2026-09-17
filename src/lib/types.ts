@@ -85,3 +85,30 @@ export interface HouseInfo {
   value: string
   sort_order: number
 }
+
+export type RsvpStatus = 'yes' | 'no' | 'maybe' | 'pending'
+
+export interface Rsvp {
+  id: string
+  trip_id: string
+  profile_id: string | null
+  guest_name: string | null
+  status: RsvpStatus
+  adults: number
+  kids: number
+  headcount: number
+  arrival_date: string | null
+  departure_date: string | null
+  notes: string | null
+  profile: { display_name: string; household_id: string | null } | null
+}
+
+export interface HouseReview {
+  id: string
+  house_id: string
+  profile_id: string
+  rating: number | null
+  comment: string | null
+  updated_at: string
+  profile: { display_name: string } | null
+}

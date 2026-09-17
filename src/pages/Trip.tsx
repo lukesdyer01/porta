@@ -3,7 +3,9 @@ import { useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useAuth } from '../auth/useAuth'
 import HouseForm from '../components/HouseForm'
+import HouseReviews from '../components/HouseReviews'
 import HouseInfoPanel from '../components/HouseInfoPanel'
+import RsvpCard from '../components/RsvpCard'
 import TripForm, { btnGhost, btnPrimary } from '../components/TripForm'
 import { dateRange, money, useHouse, useTrips } from '../lib/trips'
 
@@ -141,6 +143,11 @@ export default function Trip() {
         </div>
       )}
 
+      {/* ---- rsvp ---- */}
+      <div className="mt-8">
+        <RsvpCard tripId={trip.id} />
+      </div>
+
       {/* ---- house ---- */}
       <section className="mt-8">
         <h3 className="flex items-center gap-2 font-medium">
@@ -244,7 +251,14 @@ export default function Trip() {
       {/* ---- codes ---- */}
       {house && (
         <div className="mt-6">
-          <HouseInfoPanel houseId={house.id} />
+          <HouseInfoPanel houseId={house.id} tripId={trip.id} />
+        </div>
+      )}
+
+      {/* ---- ratings ---- */}
+      {house && (
+        <div className="mt-6">
+          <HouseReviews houseId={house.id} />
         </div>
       )}
     </div>

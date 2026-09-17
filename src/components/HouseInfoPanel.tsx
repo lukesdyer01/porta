@@ -2,7 +2,8 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { Check, Copy, KeyRound, Pencil, Plus, Trash2, X } from 'lucide-react'
 import { useState } from 'react'
 import { supabase } from '../lib/supabase'
-import { useHouseInfo } from '../lib/trips'
+import { useAuth } from '../auth/useAuth'
+import { useHouseInfo, useRsvps } from '../lib/trips'
 import type { HouseInfo } from '../lib/types'
 import { btnPrimary, fieldClass } from './TripForm'
 
@@ -36,9 +37,16 @@ function CopyButton({ value }: { value: string }) {
   )
 }
 
-export default function HouseInfoPanel({ houseId }: { houseId: string }) {
+export default function HouseInfoPanel({ houseId, tripId }: { houseId: string; tripId: string }) {
   const qc = useQueryClient()
+  const { profile, isOrganizer } = useAuth()
   const { data: rows = [], isLoading } = useHouseInfo(houseId)
+  const { data: rsvps = [] } = useRsvps(tripId)
+
+  // Row-level security hides these unless you are going, so without this the
+  // panel would just look empty and people would assume nobody filled it in.
+  const attending =
+    isOrganizer || rsvps.some((r) => r.profile_id === profile?.id && r.status === 'yes')
   const [editing, setEditing] = useState(false)
   const [label, setLabel] = useState('')
   const [value, setValue] = useState('')
@@ -103,6 +111,7 @@ export default function HouseInfoPanel({ houseId }: { houseId: string }) {
           <KeyRound className="size-4" aria-hidden="true" />
           Codes &amp; wifi
         </h3>
+        {attending && (
         <button
           type="button"
           onClick={() => {
@@ -114,11 +123,19 @@ export default function HouseInfoPanel({ houseId }: { houseId: string }) {
           {editing ? <X className="size-3.5" aria-hidden="true" /> : <Pencil className="size-3.5" aria-hidden="true" />}
           {editing ? 'Done' : 'Edit'}
         </button>
+        )}
       </div>
 
-      {isLoading && <p className="mt-3 text-sm text-[color:var(--text-muted)]">Loading…</p>}
+      {!attending && (
+        <p className="mt-3 rounded-lg bg-[color:var(--surface-sunk)] px-4 py-3 text-sm text-[color:var(--text-muted)]">
+          RSVP <span className="font-medium text-[color:var(--text)]">I&rsquo;m in</span> above and the
+          gate code, wifi and the rest appear here.
+        </p>
+      )}
 
-      {!isLoading && rows.length === 0 && !editing && (
+      {attending && isLoading && <p className="mt-3 text-sm text-[color:var(--text-muted)]">Loading…</p>}
+
+      {attending && !isLoading && rows.length === 0 && !editing && (
         <p className="mt-3 text-sm text-[color:var(--text-muted)]">
           Nothing here yet. Hit Edit to add the gate code, wifi and anything else worth having
           on your phone.
