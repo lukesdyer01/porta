@@ -3,6 +3,7 @@ import { CalendarDays, MapPin, Plus, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { useAuth } from '../auth/useAuth'
+import EventComments from '../components/EventComments'
 import { btnGhost, btnPrimary, fieldClass, labelClass } from '../components/TripForm'
 import { supabase } from '../lib/supabase'
 import { dayLabel, timeLabel, useEvents, useTrips } from '../lib/trips'
@@ -212,6 +213,7 @@ export default function Calendar() {
                         {e.description}
                       </p>
                     )}
+                    <EventComments eventId={e.id} />
                   </div>
                   <button
                     onClick={() => { if (confirm(`Remove "${e.title}"?`)) remove.mutate(e.id) }}
