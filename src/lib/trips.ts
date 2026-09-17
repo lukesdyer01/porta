@@ -228,6 +228,7 @@ export interface ExpenseRow {
   id: string
   trip_id: string
   payer_id: string
+  created_by: string
   amount_cents: number
   category: string
   description: string
@@ -246,7 +247,7 @@ export function useExpenses(tripId: string | undefined) {
       const { data, error } = await supabase
         .from('expenses')
         .select(
-          'id, trip_id, payer_id, amount_cents, category, description, incurred_on, split_method, receipt_path, payer:profiles!expenses_payer_id_fkey(display_name), expense_splits(profile_id, share_cents)',
+          'id, trip_id, payer_id, created_by, amount_cents, category, description, incurred_on, split_method, receipt_path, payer:profiles!expenses_payer_id_fkey(display_name), expense_splits(profile_id, share_cents)',
         )
         .eq('trip_id', tripId!)
         .order('incurred_on', { ascending: false })

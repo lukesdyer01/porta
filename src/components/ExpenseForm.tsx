@@ -3,7 +3,7 @@ import { useMemo, useState } from 'react'
 import { useAuth } from '../auth/useAuth'
 import { supabase } from '../lib/supabase'
 import { customSplit, equalSplit, householdSplit, type SplitRow } from '../lib/splits'
-import { money, toCents, useMembers, useRsvps, type Member } from '../lib/trips'
+import { fromCents, money, toCents, useMembers, useRsvps, type ExpenseRow, type Member } from '../lib/trips'
 import { btnGhost, btnPrimary, fieldClass, labelClass } from './TripForm'
 import { humanizeError } from '../lib/errors'
 
@@ -16,20 +16,35 @@ const CATEGORIES = [
 
 const catLabel = (c: string) => c.replace('_', ' ').replace(/^\w/, (m) => m.toUpperCase())
 
-export default function ExpenseForm({ tripId, onDone }: { tripId: string; onDone: () => void }) {
+export default function ExpenseForm({
+  tripId,
+  expense,
+  onDone,
+}: {
+  tripId: string
+  /** Present when correcting an existing expense rather than logging a new one. */
+  expense?: ExpenseRow
+  onDone: () => void
+}) {
   const { profile } = useAuth()
   const qc = useQueryClient()
   const { data: members = [] } = useMembers()
   const { data: rsvps = [] } = useRsvps(tripId)
 
-  const [payer, setPayer] = useState(profile?.id ?? '')
-  const [amount, setAmount] = useState('')
-  const [category, setCategory] = useState<string>('house')
-  const [description, setDescription] = useState('')
-  const [date, setDate] = useState(new Date().toISOString().slice(0, 10))
-  const [mode, setMode] = useState<Mode>('equal')
-  const [picked, setPicked] = useState<Set<string>>(new Set())
-  const [custom, setCustom] = useState<Record<string, string>>({})
+  const [payer, setPayer] = useState(expense?.payer_id ?? profile?.id ?? '')
+  const [amount, setAmount] = useState(expense ? fromCents(expense.amount_cents) : '')
+  const [category, setCategory] = useState<string>(expense?.category ?? 'house')
+  const [description, setDescription] = useState(expense?.description ?? '')
+  const [date, setDate] = useState(expense?.incurred_on ?? new Date().toISOString().slice(0, 10))
+  const [mode, setMode] = useState<Mode>((expense?.split_method as Mode) ?? 'equal')
+  const [picked, setPicked] = useState<Set<string>>(
+    new Set(expense?.expense_splits.map((s) => s.profile_id) ?? []),
+  )
+  const [custom, setCustom] = useState<Record<string, string>>(() =>
+    Object.fromEntries(
+      (expense?.expense_splits ?? []).map((s) => [s.profile_id, fromCents(s.share_cents)]),
+    ),
+  )
   const [error, setError] = useState<string | null>(null)
 
   const totalCents = toCents(amount) ?? 0
@@ -40,7 +55,7 @@ export default function ExpenseForm({ tripId, onDone }: { tripId: string; onDone
 
   // Default to whoever RSVP'd yes — the common case — but never lock it: the
   // whole point is choosing exactly who a cost lands on.
-  const [seeded, setSeeded] = useState(false)
+  const [seeded, setSeeded] = useState(Boolean(expense))
   if (!seeded && members.length > 0) {
     setSeeded(true)
     setPicked(new Set(goingIds.size > 0 ? [...goingIds] : members.map((m) => m.id)))
@@ -85,6 +100,8 @@ export default function ExpenseForm({ tripId, onDone }: { tripId: string; onDone
 
       const { error } = await supabase.rpc('save_expense', {
         p_expense: {
+          // save_expense upserts on this, so an id turns the save into an edit.
+          ...(expense ? { id: expense.id } : {}),
           trip_id: tripId,
           payer_id: payer,
           amount_cents: totalCents,
@@ -240,7 +257,7 @@ export default function ExpenseForm({ tripId, onDone }: { tripId: string; onDone
       <div className="flex gap-3">
         <button onClick={() => { setError(null); save.mutate() }} disabled={save.isPending}
           className={btnPrimary}>
-          {save.isPending ? 'Saving…' : 'Save expense'}
+          {save.isPending ? 'Saving…' : expense ? 'Save changes' : 'Save expense'}
         </button>
         <button onClick={onDone} className={btnGhost}>Cancel</button>
       </div>

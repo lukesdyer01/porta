@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { ArrowRight, Plus, Receipt, Trash2 } from 'lucide-react'
+import { ArrowRight, Pencil, Plus, Receipt, Trash2 } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { useAuth } from '../auth/useAuth'
 import ExpenseForm from '../components/ExpenseForm'
@@ -21,6 +21,7 @@ export default function Expenses() {
   const { data: balances = [] } = useBalances(trip?.id)
   const { data: members = [] } = useMembers()
   const [adding, setAdding] = useState(false)
+  const [editingId, setEditingId] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
 
   const nameOf = useMemo(
@@ -157,7 +158,23 @@ export default function Expenses() {
           <ul className="mt-3 divide-y divide-[color:var(--border)] rounded-xl border border-[color:var(--border)] bg-[color:var(--surface-raised)]">
             {expenses.map((e) => {
               const myShare = e.expense_splits.find((s) => s.profile_id === profile?.id)
-              const canDelete = isOrganizer || e.payer_id === profile?.id
+              // Mirrors the update policy: payer, whoever entered it, or an
+              // organizer. Checking only the payer hid edit from someone who
+              // logged an expense on another person's behalf.
+              const canEdit =
+                isOrganizer || e.payer_id === profile?.id || e.created_by === profile?.id
+              if (editingId === e.id) {
+                return (
+                  <li key={e.id} className="p-4">
+                    <ExpenseForm
+                      tripId={trip.id}
+                      expense={e}
+                      onDone={() => setEditingId(null)}
+                    />
+                  </li>
+                )
+              }
+
               return (
                 <li key={e.id} className="flex flex-wrap items-start gap-x-3 gap-y-1 p-4">
                   <div className="min-w-0 flex-1">
@@ -169,16 +186,28 @@ export default function Expenses() {
                     </p>
                   </div>
                   <span className="font-mono font-medium">{money(e.amount_cents)}</span>
-                  {canDelete && (
-                    <button
-                      onClick={() => {
-                        if (confirm(`Delete "${e.description || 'this expense'}"?`)) remove.mutate(e.id)
-                      }}
-                      aria-label="Delete expense"
-                      className="grid size-8 shrink-0 place-items-center rounded-lg border border-[color:var(--border)] transition hover:bg-[color:var(--surface-sunk)]"
-                    >
-                      <Trash2 className="size-4" aria-hidden="true" />
-                    </button>
+                  {canEdit && (
+                    <>
+                      <button
+                        onClick={() => {
+                          setAdding(false)
+                          setEditingId(e.id)
+                        }}
+                        aria-label={`Edit ${e.description || 'expense'}`}
+                        className="grid size-8 shrink-0 place-items-center rounded-lg border border-[color:var(--border)] transition hover:bg-[color:var(--surface-sunk)]"
+                      >
+                        <Pencil className="size-4" aria-hidden="true" />
+                      </button>
+                      <button
+                        onClick={() => {
+                          if (confirm(`Delete "${e.description || 'this expense'}"?`)) remove.mutate(e.id)
+                        }}
+                        aria-label="Delete expense"
+                        className="grid size-8 shrink-0 place-items-center rounded-lg border border-[color:var(--border)] transition hover:bg-[color:var(--surface-sunk)]"
+                      >
+                        <Trash2 className="size-4" aria-hidden="true" />
+                      </button>
+                    </>
                   )}
                 </li>
               )
