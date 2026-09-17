@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useAuth } from '../auth/useAuth'
 import HouseForm from '../components/HouseForm'
+import HousePhoto from '../components/HousePhoto'
 import HouseReviews from '../components/HouseReviews'
 import HouseInfoPanel from '../components/HouseInfoPanel'
 import RsvpCard from '../components/RsvpCard'
@@ -161,6 +162,7 @@ export default function Trip() {
           </div>
         ) : house ? (
           <div className="mt-3 rounded-xl border border-[color:var(--border)] bg-[color:var(--surface-raised)] p-5">
+            <HousePhoto houseId={house.id} tripId={trip.id} />
             {house.name && <p className="font-display text-lg font-semibold">{house.name}</p>}
 
             {house.address_line1 && (

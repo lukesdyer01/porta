@@ -112,3 +112,30 @@ export interface HouseReview {
   updated_at: string
   profile: { display_name: string } | null
 }
+
+export type EventKind = 'activity' | 'travel' | 'birthday' | 'reminder' | 'chore' | 'other'
+
+export interface Meal {
+  id: string
+  trip_id: string
+  meal_date: string
+  meal_type: 'breakfast' | 'lunch' | 'dinner' | 'snack'
+  household_id: string | null
+  title: string
+  description: string | null
+  household: { name: string; color: string } | null
+}
+
+export interface TripEvent {
+  id: string
+  trip_id: string
+  title: string
+  description: string | null
+  kind: EventKind
+  all_day: boolean
+  event_date: string
+  start_time: string | null
+  end_time: string | null
+  location: string | null
+  url: string | null
+}

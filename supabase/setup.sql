@@ -1124,6 +1124,231 @@ drop policy if exists house_reviews_delete on public.house_reviews;
 create policy house_reviews_delete on public.house_reviews
   for delete to authenticated
   using ( profile_id = (select auth.uid()) or (select public.is_organizer()) );
+
+-- ======================== 15_photos.sql ========================
+
+-- ===========================================================================
+-- 15_photos.sql — image storage, starting with the house photo.
+--
+-- The bucket is PRIVATE and read through signed URLs. A public bucket would be
+-- a permanent unauthenticated link to the family's photos, guessable or not.
+-- ===========================================================================
+
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values (
+  'photos', 'photos', false, 26214400,
+  array['image/jpeg','image/png','image/webp','image/avif','image/heic','image/heif']
+)
+on conflict (id) do update
+  set public = false,
+      file_size_limit = excluded.file_size_limit,
+      allowed_mime_types = excluded.allowed_mime_types;
+
+create table if not exists public.photos (
+  id           uuid primary key default gen_random_uuid(),
+  trip_id      uuid references public.trips(id) on delete cascade,
+  house_id     uuid references public.houses(id) on delete cascade,
+  kind         public.photo_kind not null default 'trip',
+  storage_path text not null unique,
+  caption      text,
+  -- Stored at upload so the grid can reserve space and not jump as images
+  -- load; there is no server to probe dimensions later.
+  width        integer,
+  height       integer,
+  bytes        integer,
+  sort_order   smallint not null default 0,
+  uploaded_by  uuid not null references public.profiles(id) on delete restrict,
+  created_at   timestamptz not null default now(),
+  constraint photos_has_owner check (trip_id is not null or house_id is not null)
+);
+
+create index if not exists photos_house_idx on public.photos (house_id, sort_order)
+  where house_id is not null;
+create index if not exists photos_trip_idx on public.photos (trip_id, sort_order, created_at desc);
+
+grant select, insert, update, delete on public.photos to authenticated;
+alter table public.photos enable row level security;
+
+-- House photos are just a picture of the house, so every member sees them.
+-- Deliberately NOT gated on RSVP the way the door codes are.
+drop policy if exists photos_select on public.photos;
+create policy photos_select on public.photos
+  for select to authenticated using ( (select public.is_member()) );
+
+drop policy if exists photos_insert on public.photos;
+create policy photos_insert on public.photos
+  for insert to authenticated
+  with check ( (select public.is_member()) and uploaded_by = (select auth.uid()) );
+
+drop policy if exists photos_update on public.photos;
+create policy photos_update on public.photos
+  for update to authenticated
+  using      ( uploaded_by = (select auth.uid()) or (select public.is_organizer()) )
+  with check ( uploaded_by = (select auth.uid()) or (select public.is_organizer()) );
+
+drop policy if exists photos_delete on public.photos;
+create policy photos_delete on public.photos
+  for delete to authenticated
+  using ( uploaded_by = (select auth.uid()) or (select public.is_organizer()) );
+
+-- ---------------------------------------------------------------------------
+-- Storage object policies. Paths look like:
+--   trips/{trip_id}/houses/{house_id}/{uuid}.webp
+-- ---------------------------------------------------------------------------
+drop policy if exists "photos read"   on storage.objects;
+drop policy if exists "photos insert" on storage.objects;
+drop policy if exists "photos update" on storage.objects;
+drop policy if exists "photos delete" on storage.objects;
+
+create policy "photos read" on storage.objects
+  for select to authenticated
+  using ( bucket_id = 'photos' and (select public.is_member()) );
+
+create policy "photos insert" on storage.objects
+  for insert to authenticated
+  with check (
+    bucket_id = 'photos'
+    and (select public.is_member())
+    and (storage.foldername(name))[1] = 'trips'
+    and owner_id = (select auth.uid())::text
+  );
+
+create policy "photos update" on storage.objects
+  for update to authenticated
+  using      ( bucket_id = 'photos'
+               and (owner_id = (select auth.uid())::text or (select public.is_organizer())) )
+  with check ( bucket_id = 'photos'
+               and (owner_id = (select auth.uid())::text or (select public.is_organizer())) );
+
+create policy "photos delete" on storage.objects
+  for delete to authenticated
+  using ( bucket_id = 'photos'
+          and (owner_id = (select auth.uid())::text or (select public.is_organizer())) );
+
+-- ======================== 16_agenda.sql ========================
+
+-- ===========================================================================
+-- 16_agenda.sql — the dinner rotation and the event calendar.
+--
+-- Dinners are claimed by HOUSEHOLD, not by person: cooking a beach-house
+-- dinner is a family effort, and the rotation people actually care about is
+-- "whose night is it".
+--
+-- Both tables are fully collaborative. Anyone can fix the schedule — that is
+-- the point of a shared agenda, and an audit trail is overkill for a family.
+-- ===========================================================================
+
+create table if not exists public.meals (
+  id           uuid primary key default gen_random_uuid(),
+  trip_id      uuid not null references public.trips(id) on delete cascade,
+  meal_date    date not null,
+  meal_type    public.meal_type not null default 'dinner',
+  household_id uuid references public.households(id) on delete set null,
+  title        text not null default '',
+  description  text,
+  created_by   uuid not null references public.profiles(id) on delete restrict,
+  created_at   timestamptz not null default now(),
+  updated_at   timestamptz not null default now(),
+  -- One dinner per night. Re-assigning edits the row instead of stacking
+  -- duplicates nobody can tell apart.
+  unique (trip_id, meal_date, meal_type)
+);
+
+create index if not exists meals_trip_date_idx on public.meals (trip_id, meal_date);
+
+-- Optional named cooks within the household, for "Sue's doing the sides".
+create table if not exists public.meal_cooks (
+  meal_id    uuid not null references public.meals(id) on delete cascade,
+  profile_id uuid not null references public.profiles(id) on delete cascade,
+  note       text,
+  primary key (meal_id, profile_id)
+);
+
+create table if not exists public.events (
+  id          uuid primary key default gen_random_uuid(),
+  trip_id     uuid not null references public.trips(id) on delete cascade,
+  title       text not null check (length(btrim(title)) between 1 and 140),
+  description text,
+  kind        public.event_kind not null default 'activity',
+  all_day     boolean not null default false,
+  event_date  date not null,
+  start_time  time,
+  end_time    time,
+  location    text,
+  url         text check (url is null or url ~* '^https?://'),
+  created_by  uuid not null references public.profiles(id) on delete restrict,
+  created_at  timestamptz not null default now(),
+  updated_at  timestamptz not null default now(),
+  constraint events_times_ordered check (end_time is null or start_time is null or end_time >= start_time)
+);
+
+create index if not exists events_trip_date_idx on public.events (trip_id, event_date, start_time);
+
+grant select, insert, update, delete on public.meals      to authenticated;
+grant select, insert, update, delete on public.meal_cooks to authenticated;
+grant select, insert, update, delete on public.events     to authenticated;
+
+drop trigger if exists meals_touch on public.meals;
+create trigger meals_touch before update on public.meals
+  for each row execute function public.touch_updated_at();
+drop trigger if exists events_touch on public.events;
+create trigger events_touch before update on public.events
+  for each row execute function public.touch_updated_at();
+
+alter table public.meals      enable row level security;
+alter table public.meal_cooks enable row level security;
+alter table public.events     enable row level security;
+
+do $$
+declare t text;
+begin
+  foreach t in array array['meals','events'] loop
+    execute format('drop policy if exists %1$s_select on public.%1$I', t);
+    execute format('drop policy if exists %1$s_insert on public.%1$I', t);
+    execute format('drop policy if exists %1$s_modify on public.%1$I', t);
+    execute format('drop policy if exists %1$s_remove on public.%1$I', t);
+
+    execute format($f$create policy %1$s_select on public.%1$I
+      for select to authenticated using ( (select public.is_member()) )$f$, t);
+    execute format($f$create policy %1$s_insert on public.%1$I
+      for insert to authenticated
+      with check ( (select public.is_member()) and created_by = (select auth.uid()) )$f$, t);
+    execute format($f$create policy %1$s_modify on public.%1$I
+      for update to authenticated
+      using ( (select public.is_member()) ) with check ( (select public.is_member()) )$f$, t);
+    execute format($f$create policy %1$s_remove on public.%1$I
+      for delete to authenticated using ( (select public.is_member()) )$f$, t);
+  end loop;
+end $$;
+
+drop policy if exists meal_cooks_all on public.meal_cooks;
+create policy meal_cooks_all on public.meal_cooks
+  for all to authenticated
+  using ( (select public.is_member()) ) with check ( (select public.is_member()) );
+
+-- ======================== 17_rsvp_upsert.sql ========================
+
+-- ===========================================================================
+-- 17_rsvp_upsert.sql — let an RSVP be saved without a read-then-write race.
+--
+-- The client decided insert-vs-update from whatever the query cache held, so
+-- changing your answer before the refetch landed tried a second INSERT and hit
+--   duplicate key value violates unique constraint "rsvps_one_per_member"
+--
+-- An upsert removes the race, but ON CONFLICT cannot target a PARTIAL unique
+-- index without repeating its predicate, which PostgREST has no way to send.
+-- A plain unique constraint behaves identically here: Postgres treats NULLs as
+-- distinct by default, so guest rows (profile_id IS NULL) still never collide
+-- with each other.
+-- ===========================================================================
+
+drop index if exists public.rsvps_one_per_member;
+
+alter table public.rsvps
+  drop constraint if exists rsvps_one_per_member;
+
+alter table public.rsvps
+  add constraint rsvps_one_per_member unique (trip_id, profile_id);
 -- (skipped 99_bootstrap_local.sql — local bootstrap, not shared)
 -- (skipped 994_cleanup_local.sql — local bootstrap, not shared)
 -- (skipped 995_seed_code_local.sql — local bootstrap, not shared)

@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from './supabase'
-import type { House, HouseInfo, HouseReview, Rsvp, Trip } from './types'
+import type { Household, House, HouseInfo, HouseReview, Meal, Rsvp, Trip, TripEvent } from './types'
 
 const TRIP_COLS = 'id, year, name, start_date, end_date, status, notes'
 const HOUSE_COLS =
@@ -120,4 +120,82 @@ export function averageRating(reviews: HouseReview[]): { avg: number; count: num
     avg: rated.reduce((s, r) => s + (r.rating ?? 0), 0) / rated.length,
     count: rated.length,
   }
+}
+
+export function useMeals(tripId: string | undefined) {
+  return useQuery({
+    enabled: Boolean(tripId),
+    queryKey: ['meals', tripId],
+    queryFn: async (): Promise<Meal[]> => {
+      const { data, error } = await supabase
+        .from('meals')
+        .select(
+          'id, trip_id, meal_date, meal_type, household_id, title, description, household:households(name, color)',
+        )
+        .eq('trip_id', tripId!)
+        .order('meal_date')
+      if (error) throw new Error(error.message)
+      return (data ?? []) as unknown as Meal[]
+    },
+  })
+}
+
+export function useEvents(tripId: string | undefined) {
+  return useQuery({
+    enabled: Boolean(tripId),
+    queryKey: ['events', tripId],
+    queryFn: async (): Promise<TripEvent[]> => {
+      const { data, error } = await supabase
+        .from('events')
+        .select('id, trip_id, title, description, kind, all_day, event_date, start_time, end_time, location, url')
+        .eq('trip_id', tripId!)
+        .order('event_date')
+        .order('start_time', { nullsFirst: true })
+      if (error) throw new Error(error.message)
+      return (data ?? []) as TripEvent[]
+    },
+  })
+}
+
+export function useHouseholds() {
+  return useQuery({
+    queryKey: ['households'],
+    queryFn: async (): Promise<Household[]> => {
+      const { data, error } = await supabase
+        .from('households')
+        .select('id, name, color, sort_order')
+        .order('sort_order')
+        .order('name')
+      if (error) throw new Error(error.message)
+      return (data ?? []) as Household[]
+    },
+  })
+}
+
+/** Every date of the trip, so the rotation shows empty nights too. */
+export function tripDays(start: string | null, end: string | null): string[] {
+  if (!start || !end) return []
+  const out: string[] = []
+  const d = new Date(start + 'T12:00:00')
+  const last = new Date(end + 'T12:00:00')
+  while (d <= last && out.length < 60) {
+    out.push(d.toISOString().slice(0, 10))
+    d.setDate(d.getDate() + 1)
+  }
+  return out
+}
+
+export const dayLabel = (iso: string) =>
+  new Date(iso + 'T12:00:00').toLocaleDateString('en-US', {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+  })
+
+export const timeLabel = (t: string | null) => {
+  if (!t) return null
+  const [h, m] = t.split(':').map(Number)
+  const d = new Date()
+  d.setHours(h, m, 0, 0)
+  return d.toLocaleTimeString('en-US', { hour: 'numeric', minute: m ? '2-digit' : undefined })
 }

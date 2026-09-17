@@ -7,6 +7,8 @@ import AppShell from './components/AppShell'
 import Spinner from './components/Spinner'
 import { isConfigured } from './lib/supabase'
 import Admin from './pages/Admin'
+import Calendar from './pages/Calendar'
+import Meals from './pages/Meals'
 import Trip from './pages/Trip'
 import NotConfigured from './pages/NotConfigured'
 import Pending from './pages/Pending'
@@ -30,6 +32,10 @@ function Gate() {
       <Route element={<AppShell />}>
         <Route index element={<Trip />} />
         <Route path="trip/:year" element={<Trip />} />
+        <Route path="meals" element={<Meals />} />
+        <Route path="meals/:year" element={<Meals />} />
+        <Route path="calendar" element={<Calendar />} />
+        <Route path="calendar/:year" element={<Calendar />} />
         <Route path="profile" element={<Profile />} />
         <Route path="members" element={<Admin />} />
         <Route path="*" element={<Trip />} />

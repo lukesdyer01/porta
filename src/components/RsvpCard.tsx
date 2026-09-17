@@ -60,12 +60,18 @@ export default function RsvpCard({ tripId }: { tripId: string }) {
         notes: notes.trim() || null,
       }
 
-      if (mine) {
-        const { error } = await supabase.from('rsvps').update(row).eq('id', mine.id)
-        if (error) throw new Error(error.message)
-      } else {
-        const { error } = await supabase.from('rsvps').insert({ ...row, created_by: profile.id })
-        if (error) throw new Error(error.message)
+      // Upsert rather than branching on whether the cache happens to know
+      // about an existing row: changing your answer twice quickly used to fire
+      // a second INSERT and trip the unique constraint.
+      const { error } = await supabase
+        .from('rsvps')
+        .upsert({ ...row, created_by: profile.id }, { onConflict: 'trip_id,profile_id' })
+      if (error) {
+        throw new Error(
+          error.code === '23505'
+            ? 'Your RSVP was already saved — reload if it looks out of date.'
+            : error.message,
+        )
       }
     },
     onSuccess: () => {

@@ -6,7 +6,11 @@ import { useAuth } from '../auth/useAuth'
  * Nav grows as phases land. Keep this list short enough to fit a phone's
  * bottom bar without scrolling — that's where it will actually be used.
  */
-const NAV = [{ to: '/', label: 'Trip', end: true }]
+const NAV = [
+  { to: '/', label: 'Trip', end: true },
+  { to: '/meals', label: 'Dinners', end: false },
+  { to: '/calendar', label: 'Calendar', end: false },
+]
 const ORGANIZER_NAV = [{ to: '/members', label: 'Members', end: false }]
 
 export default function AppShell() {
