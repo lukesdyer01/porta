@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Check, ShieldCheck, Trash2, UserPlus } from 'lucide-react'
 import { useState } from 'react'
 import { useAuth } from '../auth/useAuth'
+import Households from '../components/Households'
 import InviteCodes from '../components/InviteCodes'
 import { parseEmails } from '../lib/parseEmails'
 import { supabase } from '../lib/supabase'
@@ -108,6 +109,8 @@ export default function Admin() {
       </p>
 
       <InviteCodes onError={setProblem} />
+
+      <Households onError={setProblem} />
 
       {/* ---- invite ---- */}
       <section className="mt-6 rounded-xl border border-[color:var(--border)] bg-[color:var(--surface-raised)] p-5">
