@@ -3,6 +3,7 @@ import { ImageOff, Plus } from 'lucide-react'
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../auth/useAuth'
+import Countdown from '../components/Countdown'
 import TripForm, { btnPrimary } from '../components/TripForm'
 import { humanizeError } from '../lib/errors'
 import { dateRange, isPastTrip, money, useTrips } from '../lib/trips'
@@ -110,6 +111,11 @@ export default function Trips() {
 
   return (
     <div>
+      {/* Only renders when there is a trip ahead or in progress. */}
+      <div className="mb-6">
+        <Countdown trips={trips} />
+      </div>
+
       <div className="flex flex-wrap items-center gap-3">
         <h2 className="font-display text-2xl font-semibold">Every year</h2>
         {isOrganizer && (
