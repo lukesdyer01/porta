@@ -1,4 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { Suspense, lazy } from 'react'
 import { HashRouter, Route, Routes } from 'react-router-dom'
 import { AuthProvider } from './auth/AuthProvider'
 import { useAuth } from './auth/useAuth'
@@ -9,11 +10,17 @@ import { isConfigured } from './lib/supabase'
 import Admin from './pages/Admin'
 import Calendar from './pages/Calendar'
 import Expenses from './pages/Expenses'
+import Gallery from './pages/Gallery'
+import Journal from './pages/Journal'
 import Meals from './pages/Meals'
 import Trip from './pages/Trip'
 import NotConfigured from './pages/NotConfigured'
 import Pending from './pages/Pending'
 import Profile from './pages/Profile'
+
+// Leaflet is a large dependency that most visits never touch, and this app is
+// opened on phone data at the beach. Load it only when the map is opened.
+const TripMap = lazy(() => import('./pages/Map'))
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -39,6 +46,18 @@ function Gate() {
         <Route path="calendar/:year" element={<Calendar />} />
         <Route path="expenses" element={<Expenses />} />
         <Route path="expenses/:year" element={<Expenses />} />
+        <Route path="photos" element={<Gallery />} />
+        <Route path="photos/:year" element={<Gallery />} />
+        <Route path="journal" element={<Journal />} />
+        <Route path="journal/:year" element={<Journal />} />
+        <Route
+          path="map"
+          element={
+            <Suspense fallback={<p className="text-sm text-[color:var(--text-muted)]">Loading map…</p>}>
+              <TripMap />
+            </Suspense>
+          }
+        />
         <Route path="profile" element={<Profile />} />
         <Route path="members" element={<Admin />} />
         <Route path="*" element={<Trip />} />
