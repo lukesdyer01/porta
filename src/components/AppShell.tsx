@@ -41,7 +41,7 @@ export default function AppShell() {
             <h1 className="font-display truncate text-xl leading-tight font-semibold">
               {/* Map and Members cover every year, so a single year would be a
                   lie there — fall back to the app's name. */}
-              {sectionScoped && year != null ? year : 'King Family Beach Week'}
+              {sectionScoped && year != null ? year : 'Family Beach Week'}
             </h1>
           </div>
 

@@ -82,7 +82,7 @@ export default function SignIn() {
           Port Aransas
         </p>
         <h1 className="font-display mt-2 text-3xl leading-tight font-semibold">
-          King Family Beach Week
+          Family Beach Week
         </h1>
       </header>
 

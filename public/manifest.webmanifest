@@ -1,7 +1,7 @@
 {
-  "name": "Port A — King Family Beach Week",
+  "name": "Port A — Family Beach Week",
   "short_name": "Port A",
-  "description": "The King family's Port Aransas beach trip: house, codes, meals, calendar, expenses and photos.",
+  "description": "The family's Port Aransas beach trip: house, codes, meals, calendar, expenses and photos.",
   "start_url": ".",
   "scope": ".",
   "display": "standalone",

@@ -1,4 +1,4 @@
-# King Family Beach Week
+# Family Beach Week
 
 The family's Port Aransas trip, every year in one place: the house and its gate/pool/wifi
 codes, who's coming, the dinner rotation, the event calendar, shared expenses, photos,

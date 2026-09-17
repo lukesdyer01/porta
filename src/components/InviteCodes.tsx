@@ -144,7 +144,7 @@ export default function InviteCodes({ onError }: { onError: (m: string | null) =
         </button>
       </div>
       <p className="mt-2 text-xs text-[color:var(--text-muted)]">
-        Avoid anything guessable from this site &mdash; &ldquo;king&rdquo; is written on every page.
+        Avoid anything obvious &mdash; a surname or the year is the first thing anyone would try.
       </p>
     </section>
   )
