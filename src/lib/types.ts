@@ -121,6 +121,7 @@ export interface Meal {
   meal_date: string
   meal_type: 'breakfast' | 'lunch' | 'dinner' | 'snack'
   household_id: string | null
+  eat_out: boolean
   title: string
   description: string | null
   household: { name: string; color: string } | null

@@ -133,7 +133,7 @@ export function useMeals(tripId: string | undefined) {
       const { data, error } = await supabase
         .from('meals')
         .select(
-          'id, trip_id, meal_date, meal_type, household_id, title, description, household:households(name, color)',
+          'id, trip_id, meal_date, meal_type, household_id, eat_out, title, description, household:households(name, color)',
         )
         .eq('trip_id', tripId!)
         .order('meal_date')
