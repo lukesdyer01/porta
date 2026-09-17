@@ -38,8 +38,8 @@
 
 /* Semantic tokens. Light is the base definition; dark only redefines. */
 :root {
-  --surface: #f4ece0;
-  --surface-raised: #fffcf6;
+  --surface: #eee2d0;
+  --surface-raised: #fffefb;
   --surface-sunk: #ece0cd;
   --border: var(--color-sand-300);
   --text: var(--color-ink-900);
@@ -48,7 +48,7 @@
   --accent-contrast: #ffffff;
   /* Sky at the top, sand at the bottom. Fixed so it stays put while the page
      scrolls rather than repeating down a long trip page. */
-  --page-wash: linear-gradient(180deg, #e7f1ef 0%, #f4ece0 42%, #f0e4d2 100%);
+  --page-wash: linear-gradient(180deg, #e2eeeb 0%, #eee2d0 42%, #e9dcc6 100%);
   --card-shadow: 0 1px 2px rgba(120, 94, 58, 0.05), 0 6px 16px -8px rgba(120, 94, 58, 0.18);
   color-scheme: light;
 }
@@ -56,7 +56,7 @@
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme='light']) {
     --surface: #0d1f24;
-    --surface-raised: #142c33;
+    --surface-raised: #1a353d;
     --surface-sunk: #0a181c;
     --border: #25424a;
     --text: #f2e9db;
@@ -71,7 +71,7 @@
 
 :root[data-theme='dark'] {
   --surface: #0d1f24;
-  --surface-raised: #142c33;
+  --surface-raised: #1a353d;
   --surface-sunk: #0a181c;
   --border: #25424a;
   --text: #f2e9db;
