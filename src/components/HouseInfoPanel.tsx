@@ -6,6 +6,7 @@ import { useAuth } from '../auth/useAuth'
 import { useHouseInfo, useRsvps } from '../lib/trips'
 import type { HouseInfo } from '../lib/types'
 import { btnPrimary, fieldClass } from './TripForm'
+import { humanizeError } from '../lib/errors'
 
 /** Starting points so nobody stares at an empty panel wondering what goes here. */
 const SUGGESTIONS = ['Gate code', 'Door code', 'Pool code', 'Wifi network', 'Wifi password', 'Trash day']
@@ -76,7 +77,7 @@ export default function HouseInfoPanel({ houseId, tripId }: { houseId: string; t
       setError(null)
       void refresh()
     },
-    onError: (e: Error) => setError(e.message),
+    onError: (e: Error) => setError(humanizeError(e)),
   })
 
   const update = useMutation({
@@ -88,7 +89,7 @@ export default function HouseInfoPanel({ houseId, tripId }: { houseId: string; t
       if (error) throw new Error(error.message)
     },
     onSuccess: () => void refresh(),
-    onError: (e: Error) => setError(e.message),
+    onError: (e: Error) => setError(humanizeError(e)),
   })
 
   const remove = useMutation({
@@ -97,7 +98,7 @@ export default function HouseInfoPanel({ houseId, tripId }: { houseId: string; t
       if (error) throw new Error(error.message)
     },
     onSuccess: () => void refresh(),
-    onError: (e: Error) => setError(e.message),
+    onError: (e: Error) => setError(humanizeError(e)),
   })
 
   const unused = SUGGESTIONS.filter(

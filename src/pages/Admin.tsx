@@ -6,6 +6,8 @@ import InviteCodes from '../components/InviteCodes'
 import { parseEmails } from '../lib/parseEmails'
 import { supabase } from '../lib/supabase'
 import type { AddMembersResult, AdminMember } from '../lib/types'
+import { usePageTitle } from '../lib/usePageTitle'
+import { humanizeError } from '../lib/errors'
 
 function useMembers() {
   return useQuery({
@@ -23,6 +25,7 @@ function useMembers() {
 }
 
 export default function Admin() {
+  usePageTitle('Members')
   const { isOrganizer, profile } = useAuth()
   const qc = useQueryClient()
   const { data: members = [], isLoading, error } = useMembers()
@@ -52,7 +55,7 @@ export default function Admin() {
       void refresh()
     },
     onError: (e: Error) => {
-      setProblem(e.message)
+      setProblem(humanizeError(e))
       setResult(null)
     },
   })
@@ -69,7 +72,7 @@ export default function Admin() {
       setProblem(null)
       void refresh()
     },
-    onError: (e: Error) => setProblem(e.message),
+    onError: (e: Error) => setProblem(humanizeError(e)),
   })
 
   const remove = useMutation({
@@ -81,7 +84,7 @@ export default function Admin() {
       setProblem(null)
       void refresh()
     },
-    onError: (e: Error) => setProblem(e.message),
+    onError: (e: Error) => setProblem(humanizeError(e)),
   })
 
   if (!isOrganizer) {
@@ -192,7 +195,7 @@ export default function Admin() {
         {isLoading && <p className="mt-3 text-sm text-[color:var(--text-muted)]">Loading…</p>}
         {error && (
           <p className="mt-3 text-sm text-[color:var(--color-sunset-600)]">
-            Couldn&rsquo;t load members: {(error as Error).message}
+            Couldn&rsquo;t load members: {humanizeError(error)}
           </p>
         )}
 

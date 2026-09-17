@@ -2,6 +2,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import { supabase } from '../lib/supabase'
 import type { Trip, TripStatus } from '../lib/types'
+import { humanizeError } from '../lib/errors'
 
 const STATUSES: TripStatus[] = ['planning', 'upcoming', 'active', 'archived']
 
@@ -64,7 +65,7 @@ export default function TripForm({
       void qc.invalidateQueries({ queryKey: ['trips'] })
       onDone(y)
     },
-    onError: (e: Error) => setError(e.message),
+    onError: (e: Error) => setError(humanizeError(e)),
   })
 
   return (

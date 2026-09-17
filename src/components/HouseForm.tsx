@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase'
 import { fromCents, toCents } from '../lib/trips'
 import type { House } from '../lib/types'
 import { btnGhost, btnPrimary, fieldClass, labelClass } from './TripForm'
+import { humanizeError } from '../lib/errors'
 
 export default function HouseForm({
   tripId,
@@ -78,7 +79,7 @@ export default function HouseForm({
       void qc.invalidateQueries({ queryKey: ['house', tripId] })
       onDone()
     },
-    onError: (e: Error) => setError(e.message),
+    onError: (e: Error) => setError(humanizeError(e)),
   })
 
   return (

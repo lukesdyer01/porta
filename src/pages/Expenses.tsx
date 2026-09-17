@@ -8,8 +8,11 @@ import { btnGhost, btnPrimary } from '../components/TripForm'
 import { settle } from '../lib/settle'
 import { supabase } from '../lib/supabase'
 import { money, useBalances, useExpenses, useMembers, useTrips } from '../lib/trips'
+import { usePageTitle } from '../lib/usePageTitle'
+import { humanizeError } from '../lib/errors'
 
 export default function Expenses() {
+  usePageTitle('Money')
   const { year } = useParams()
   const { profile, isOrganizer } = useAuth()
   const qc = useQueryClient()
@@ -42,7 +45,7 @@ export default function Expenses() {
       void qc.invalidateQueries({ queryKey: ['expenses', trip?.id] })
       void qc.invalidateQueries({ queryKey: ['balances', trip?.id] })
     },
-    onError: (e: Error) => setError(e.message),
+    onError: (e: Error) => setError(humanizeError(e)),
   })
 
   const markPaid = useMutation({
@@ -61,7 +64,7 @@ export default function Expenses() {
       setError(null)
       void qc.invalidateQueries({ queryKey: ['balances', trip?.id] })
     },
-    onError: (e: Error) => setError(e.message),
+    onError: (e: Error) => setError(humanizeError(e)),
   })
 
   if (!trip) return <p className="text-sm text-[color:var(--text-muted)]">No trip yet.</p>

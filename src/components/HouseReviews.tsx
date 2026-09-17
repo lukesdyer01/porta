@@ -5,6 +5,7 @@ import { useAuth } from '../auth/useAuth'
 import { supabase } from '../lib/supabase'
 import { averageRating, useReviews } from '../lib/trips'
 import { btnPrimary, fieldClass } from './TripForm'
+import { humanizeError } from '../lib/errors'
 
 function Stars({
   value,
@@ -87,7 +88,7 @@ export default function HouseReviews({ houseId }: { houseId: string }) {
       setError(null)
       void refresh()
     },
-    onError: (e: Error) => setError(e.message),
+    onError: (e: Error) => setError(humanizeError(e)),
   })
 
   const remove = useMutation({
@@ -101,7 +102,7 @@ export default function HouseReviews({ houseId }: { houseId: string }) {
       setComment('')
       void refresh()
     },
-    onError: (e: Error) => setError(e.message),
+    onError: (e: Error) => setError(humanizeError(e)),
   })
 
   const { avg, count } = averageRating(reviews)

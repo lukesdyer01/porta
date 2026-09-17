@@ -4,6 +4,7 @@ import { useRef, useState } from 'react'
 import { useAuth } from '../auth/useAuth'
 import { prepareImage } from '../lib/images'
 import { supabase } from '../lib/supabase'
+import { humanizeError } from '../lib/errors'
 
 const SIGN_TTL = 60 * 60
 
@@ -81,7 +82,7 @@ export default function HousePhoto({ houseId, tripId }: { houseId: string; tripI
       setError(null)
       void qc.invalidateQueries({ queryKey: ['house-photo', houseId] })
     },
-    onError: (e: Error) => setError(e.message),
+    onError: (e: Error) => setError(humanizeError(e)),
     onSettled: () => setBusy(false),
   })
 
@@ -93,7 +94,7 @@ export default function HousePhoto({ houseId, tripId }: { houseId: string; tripI
       await supabase.storage.from('photos').remove([photo.storage_path])
     },
     onSuccess: () => void qc.invalidateQueries({ queryKey: ['house-photo', houseId] }),
-    onError: (e: Error) => setError(e.message),
+    onError: (e: Error) => setError(humanizeError(e)),
   })
 
   const canEdit = isOrganizer || photo?.uploaded_by === profile?.id || !photo

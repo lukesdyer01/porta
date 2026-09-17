@@ -1,9 +1,12 @@
 import { useEffect, useState } from 'react'
 import { useAuth } from '../auth/useAuth'
+import AvatarUpload from '../components/AvatarUpload'
 import { supabase } from '../lib/supabase'
 import type { Household } from '../lib/types'
+import { usePageTitle } from '../lib/usePageTitle'
 
 export default function Profile() {
+  usePageTitle('Profile')
   const { profile, refreshProfile } = useAuth()
   const [households, setHouseholds] = useState<Household[]>([])
   const [fullName, setFullName] = useState(profile?.full_name ?? '')
@@ -75,6 +78,10 @@ export default function Profile() {
     <div className="max-w-md">
       <h2 className="font-display text-2xl font-semibold">Your profile</h2>
       <p className="mt-1 text-sm text-[color:var(--text-muted)]">{profile.email}</p>
+
+      <div className="mt-6">
+        <AvatarUpload />
+      </div>
 
       <form onSubmit={save} className="mt-6 space-y-5">
         <div>

@@ -6,6 +6,8 @@ import { useAuth } from '../auth/useAuth'
 import { prepareImage } from '../lib/images'
 import { supabase } from '../lib/supabase'
 import { useTrips } from '../lib/trips'
+import { usePageTitle } from '../lib/usePageTitle'
+import { humanizeError } from '../lib/errors'
 
 const SIGN_TTL = 60 * 60
 
@@ -20,6 +22,7 @@ interface Shot {
 }
 
 export default function Gallery() {
+  usePageTitle('Photos')
   const { year } = useParams()
   const { profile, isOrganizer } = useAuth()
   const qc = useQueryClient()
@@ -96,7 +99,7 @@ export default function Gallery() {
       if (failures.length) throw new Error(failures.join(' · '))
     },
     onSuccess: () => setError(null),
-    onError: (e: Error) => setError(e.message),
+    onError: (e: Error) => setError(humanizeError(e)),
     onSettled: () => {
       setProgress(null)
       void qc.invalidateQueries({ queryKey: ['gallery', trip?.id] })
@@ -113,7 +116,7 @@ export default function Gallery() {
       setOpen(null)
       void qc.invalidateQueries({ queryKey: ['gallery', trip?.id] })
     },
-    onError: (e: Error) => setError(e.message),
+    onError: (e: Error) => setError(humanizeError(e)),
   })
 
   if (!trip) return <p className="text-sm text-[color:var(--text-muted)]">No trip yet.</p>

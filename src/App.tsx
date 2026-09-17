@@ -5,6 +5,7 @@ import { AuthProvider } from './auth/AuthProvider'
 import { useAuth } from './auth/useAuth'
 import SignIn from './auth/SignIn'
 import AppShell from './components/AppShell'
+import ErrorBoundary from './components/ErrorBoundary'
 import Spinner from './components/Spinner'
 import { isConfigured } from './lib/supabase'
 import Admin from './pages/Admin'
@@ -70,6 +71,7 @@ export default function App() {
   if (!isConfigured) return <NotConfigured />
 
   return (
+    <ErrorBoundary>
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         {/* Hash routing: GitHub Pages serves a 404 for any path it has no file
@@ -79,5 +81,6 @@ export default function App() {
         </HashRouter>
       </AuthProvider>
     </QueryClientProvider>
+    </ErrorBoundary>
   )
 }

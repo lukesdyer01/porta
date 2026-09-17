@@ -6,6 +6,8 @@ import { useAuth } from '../auth/useAuth'
 import { btnGhost, btnPrimary, fieldClass, labelClass } from '../components/TripForm'
 import { supabase } from '../lib/supabase'
 import { dayLabel, useTrips } from '../lib/trips'
+import { usePageTitle } from '../lib/usePageTitle'
+import { humanizeError } from '../lib/errors'
 
 interface Entry {
   id: string
@@ -17,6 +19,7 @@ interface Entry {
 }
 
 export default function Journal() {
+  usePageTitle('Journal')
   const { year } = useParams()
   const { profile, isOrganizer } = useAuth()
   const qc = useQueryClient()
@@ -74,7 +77,7 @@ export default function Journal() {
       reset()
       void refresh()
     },
-    onError: (e: Error) => setError(e.message),
+    onError: (e: Error) => setError(humanizeError(e)),
   })
 
   const remove = useMutation({
@@ -83,7 +86,7 @@ export default function Journal() {
       if (error) throw new Error(error.message)
     },
     onSuccess: () => void refresh(),
-    onError: (e: Error) => setError(e.message),
+    onError: (e: Error) => setError(humanizeError(e)),
   })
 
   if (!trip) return <p className="text-sm text-[color:var(--text-muted)]">No trip yet.</p>

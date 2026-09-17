@@ -6,6 +6,7 @@ import { supabase } from '../lib/supabase'
 import { dateRange, useRsvps } from '../lib/trips'
 import type { Rsvp, RsvpStatus } from '../lib/types'
 import { btnPrimary, fieldClass, labelClass } from './TripForm'
+import { humanizeError } from '../lib/errors'
 
 const CHOICES: { value: RsvpStatus; label: string }[] = [
   { value: 'yes', label: "I'm in" },
@@ -80,7 +81,7 @@ export default function RsvpCard({ tripId }: { tripId: string }) {
       // Saying yes unlocks the house codes, so that panel has to refetch.
       void qc.invalidateQueries({ queryKey: ['house-info'] })
     },
-    onError: (e: Error) => setError(e.message),
+    onError: (e: Error) => setError(humanizeError(e)),
   })
 
   const going = rsvps.filter((r) => r.status === 'yes')

@@ -9,8 +9,11 @@ import HouseInfoPanel from '../components/HouseInfoPanel'
 import RsvpCard from '../components/RsvpCard'
 import TripForm, { btnGhost, btnPrimary } from '../components/TripForm'
 import { dateRange, money, useHouse, useTrips } from '../lib/trips'
+import { usePageTitle } from '../lib/usePageTitle'
+import { humanizeError } from '../lib/errors'
 
 export default function Trip() {
+  usePageTitle('Trip')
   const { year: yearParam } = useParams()
   const navigate = useNavigate()
   const { isOrganizer } = useAuth()
@@ -29,7 +32,7 @@ export default function Trip() {
   if (error)
     return (
       <p className="text-sm text-[color:var(--color-sunset-600)]">
-        Couldn&rsquo;t load trips: {(error as Error).message}
+        Couldn&rsquo;t load trips: {humanizeError(error)}
       </p>
     )
 

@@ -5,8 +5,10 @@ import { useAuth } from '../auth/useAuth'
 import { fieldClass } from '../components/TripForm'
 import { supabase } from '../lib/supabase'
 import { dayLabel, tripDays, useHouseholds, useMeals, useTrips } from '../lib/trips'
+import { usePageTitle } from '../lib/usePageTitle'
 
 export default function Meals() {
+  usePageTitle('Dinners')
   const { year } = useParams()
   const { profile } = useAuth()
   const qc = useQueryClient()

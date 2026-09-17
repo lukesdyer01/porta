@@ -7,6 +7,8 @@ import { btnGhost, btnPrimary, fieldClass, labelClass } from '../components/Trip
 import { supabase } from '../lib/supabase'
 import { dayLabel, timeLabel, useEvents, useTrips } from '../lib/trips'
 import type { EventKind, TripEvent } from '../lib/types'
+import { usePageTitle } from '../lib/usePageTitle'
+import { humanizeError } from '../lib/errors'
 
 const KINDS: EventKind[] = ['activity', 'travel', 'birthday', 'reminder', 'chore', 'other']
 
@@ -20,6 +22,7 @@ const KIND_STYLE: Record<EventKind, string> = {
 }
 
 export default function Calendar() {
+  usePageTitle('Calendar')
   const { year } = useParams()
   const { profile } = useAuth()
   const qc = useQueryClient()
@@ -71,7 +74,7 @@ export default function Calendar() {
       setF((p) => ({ ...p, title: '', start_time: '', end_time: '', location: '', description: '' }))
       void refresh()
     },
-    onError: (e: Error) => setError(e.message),
+    onError: (e: Error) => setError(humanizeError(e)),
   })
 
   const remove = useMutation({
@@ -80,7 +83,7 @@ export default function Calendar() {
       if (error) throw new Error(error.message)
     },
     onSuccess: () => void refresh(),
-    onError: (e: Error) => setError(e.message),
+    onError: (e: Error) => setError(humanizeError(e)),
   })
 
   if (!trip) return <p className="text-sm text-[color:var(--text-muted)]">No trip yet.</p>

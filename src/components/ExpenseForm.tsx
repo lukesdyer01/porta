@@ -5,6 +5,7 @@ import { supabase } from '../lib/supabase'
 import { customSplit, equalSplit, householdSplit, type SplitRow } from '../lib/splits'
 import { money, toCents, useMembers, useRsvps, type Member } from '../lib/trips'
 import { btnGhost, btnPrimary, fieldClass, labelClass } from './TripForm'
+import { humanizeError } from '../lib/errors'
 
 type Mode = 'equal' | 'household' | 'custom'
 
@@ -105,7 +106,7 @@ export default function ExpenseForm({ tripId, onDone }: { tripId: string; onDone
       void qc.invalidateQueries({ queryKey: ['balances', tripId] })
       onDone()
     },
-    onError: (e: Error) => setError(e.message),
+    onError: (e: Error) => setError(humanizeError(e)),
   })
 
   const shareOf = (m: Member) => splits.find((s) => s.profileId === m.id)?.shareCents ?? 0

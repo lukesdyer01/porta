@@ -1,6 +1,7 @@
 import { LogOut, User } from 'lucide-react'
 import { NavLink, Outlet } from 'react-router-dom'
 import { useAuth } from '../auth/useAuth'
+import { useOnline } from '../lib/useOnline'
 
 const NAV = [
   { to: '/', label: 'Trip', end: true },
@@ -15,10 +16,19 @@ const ORGANIZER_NAV = [{ to: '/members', label: 'Members', end: false }]
 
 export default function AppShell() {
   const { profile, signOut, isOrganizer } = useAuth()
+  const online = useOnline()
   const nav = isOrganizer ? [...NAV, ...ORGANIZER_NAV] : NAV
 
   return (
     <div className="flex min-h-dvh flex-col">
+      {!online && (
+        <p
+          role="status"
+          className="bg-[color:var(--color-sunset-500)] px-4 py-1.5 text-center text-sm text-white"
+        >
+          You&rsquo;re offline — changes won&rsquo;t save until the signal comes back.
+        </p>
+      )}
       <header className="sticky top-0 z-20 border-b border-[color:var(--border)] bg-[color:var(--surface-raised)]/90 backdrop-blur">
         <div className="mx-auto flex max-w-5xl items-center gap-3 px-4 pt-3">
           <div className="min-w-0 flex-1">
