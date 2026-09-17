@@ -18,7 +18,7 @@ const ORGANIZER_NAV = [{ section: 'members', label: 'Members', end: false }]
 export default function AppShell() {
   const { profile, signOut, isOrganizer } = useAuth()
   const online = useOnline()
-  const { trips, year, setYear, linkTo } = useTripContext()
+  const { trips, year, setYear, linkTo, sectionScoped } = useTripContext()
   const nav = isOrganizer ? [...NAV, ...ORGANIZER_NAV] : NAV
 
   return (
@@ -34,15 +34,14 @@ export default function AppShell() {
       <header className="sticky top-0 z-20 border-b border-[color:var(--border)] bg-[color:var(--surface-raised)]/90 backdrop-blur">
         <div className="mx-auto flex max-w-5xl items-center gap-3 px-4 pt-3">
           <div className="min-w-0 flex-1">
-            <p className="text-[10px] font-medium tracking-[0.18em] text-[color:var(--text-muted)] uppercase">
-              Port Aransas
-            </p>
-            <h1 className="font-display truncate text-lg leading-tight font-semibold">
-              King Family Beach Week
+            <h1 className="font-display truncate text-xl leading-tight font-semibold">
+              {/* Map and Members cover every year, so a single year would be a
+                  lie there — fall back to the app's name. */}
+              {sectionScoped && year != null ? year : 'King Family Beach Week'}
             </h1>
           </div>
 
-          {trips.length > 1 && year != null && (
+          {sectionScoped && trips.length > 1 && year != null && (
             <select
               aria-label="Switch year"
               value={year}

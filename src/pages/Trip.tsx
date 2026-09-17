@@ -86,16 +86,21 @@ export default function Trip() {
       {/* ---- trip header ---- */}
       <div className="flex flex-wrap items-start gap-3">
         <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2">
-            <h2 className="font-display text-3xl font-semibold">{trip.year}</h2>
+          {/* The header already says the year, so lead with whatever else
+              identifies this trip and only fall back to the year. */}
+          <div className="flex flex-wrap items-center gap-2">
+            <h2 className="font-display text-2xl font-semibold">
+              {trip.name || when || trip.year}
+            </h2>
             {trip.status !== 'active' && (
               <span className="rounded-full bg-[color:var(--surface-sunk)] px-2.5 py-0.5 text-xs font-medium text-[color:var(--text-muted)]">
                 {trip.status}
               </span>
             )}
           </div>
-          {trip.name && <p className="mt-0.5 text-[color:var(--text-muted)]">{trip.name}</p>}
-          {when && <p className="mt-1 text-sm text-[color:var(--text-muted)]">{when}</p>}
+          {trip.name && when && (
+            <p className="mt-1 text-sm text-[color:var(--text-muted)]">{when}</p>
+          )}
         </div>
 
 

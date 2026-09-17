@@ -10,6 +10,8 @@ export interface TripContextValue {
   setYear: (year: number) => void
   /** Build a link to another section that stays on this trip. */
   linkTo: (section: string) => string
+  /** False on Map and Members, which span every year. */
+  sectionScoped: boolean
   isLoading: boolean
   error: unknown
 }

@@ -28,6 +28,7 @@ export function TripProvider({ children }: { children: ReactNode }) {
       },
       linkTo: (target: string) =>
         YEAR_SCOPED.has(target) && year ? `/${target}/${year}` : `/${target}`,
+      sectionScoped: YEAR_SCOPED.has(section),
     }
   }, [trips, isLoading, error, location.pathname, navigate])
 
