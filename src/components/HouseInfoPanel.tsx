@@ -5,6 +5,7 @@ import { supabase } from '../lib/supabase'
 import { useAuth } from '../auth/useAuth'
 import { useHouseInfo, useRsvps } from '../lib/trips'
 import type { HouseInfo } from '../lib/types'
+import CollapsibleCard from './CollapsibleCard'
 import { btnPrimary, fieldClass } from './TripForm'
 import { humanizeError } from '../lib/errors'
 
@@ -105,46 +106,54 @@ export default function HouseInfoPanel({ houseId, tripId }: { houseId: string; t
     (s) => !rows.some((r) => r.label.toLowerCase() === s.toLowerCase()),
   )
 
+  // Closed, the header says whether there is anything to open — without
+  // showing a single code, since the point of collapsing these is that they
+  // are not on screen until somebody asks for them.
+  const summary = !attending
+    ? 'RSVP to see them'
+    : rows.length === 0
+      ? 'nothing saved yet'
+      : `${rows.length} saved`
+
   return (
-    <section className="rounded-xl border border-[color:var(--border)] bg-[color:var(--surface-raised)] p-5">
-      <div className="flex items-center gap-2">
-        <h3 className="flex items-center gap-2 font-medium">
-          <KeyRound className="size-4" aria-hidden="true" />
-          Codes &amp; wifi
-        </h3>
-        {attending && (
+    <CollapsibleCard
+      id="house-codes"
+      icon={<KeyRound className="size-4" aria-hidden="true" />}
+      title="Codes & wifi"
+      summary={summary}
+    >
+      {attending && (
         <button
           type="button"
           onClick={() => {
             setEditing((v) => !v)
             setError(null)
           }}
-          className="ml-auto flex items-center gap-1.5 text-sm text-[color:var(--text-muted)] underline underline-offset-4 hover:text-[color:var(--text)]"
+          className="mb-3 flex items-center gap-1.5 text-sm text-[color:var(--text-muted)] underline underline-offset-4 hover:text-[color:var(--text)]"
         >
           {editing ? <X className="size-3.5" aria-hidden="true" /> : <Pencil className="size-3.5" aria-hidden="true" />}
           {editing ? 'Done' : 'Edit'}
         </button>
-        )}
-      </div>
+      )}
 
       {!attending && (
-        <p className="mt-3 rounded-lg bg-[color:var(--surface-sunk)] px-4 py-3 text-sm text-[color:var(--text-muted)]">
+        <p className="rounded-lg bg-[color:var(--surface-sunk)] px-4 py-3 text-sm text-[color:var(--text-muted)]">
           RSVP <span className="font-medium text-[color:var(--text)]">I&rsquo;m in</span> above and the
           gate code, wifi and the rest appear here.
         </p>
       )}
 
-      {attending && isLoading && <p className="mt-3 text-sm text-[color:var(--text-muted)]">Loading…</p>}
+      {attending && isLoading && <p className="text-sm text-[color:var(--text-muted)]">Loading…</p>}
 
       {attending && !isLoading && rows.length === 0 && !editing && (
-        <p className="mt-3 text-sm text-[color:var(--text-muted)]">
+        <p className="text-sm text-[color:var(--text-muted)]">
           Nothing here yet. Hit Edit to add the gate code, wifi and anything else worth having
           on your phone.
         </p>
       )}
 
       {rows.length > 0 && (
-        <dl className="mt-4 divide-y divide-[color:var(--border)] rounded-lg border border-[color:var(--border)]">
+        <dl className="divide-y divide-[color:var(--border)] rounded-lg border border-[color:var(--border)]">
           {rows.map((r) => (
             <div key={r.id} className="flex items-center gap-3 px-3 py-2.5">
               <dt className="w-32 shrink-0 text-sm text-[color:var(--text-muted)]">{r.label}</dt>
@@ -227,6 +236,6 @@ export default function HouseInfoPanel({ houseId, tripId }: { houseId: string; t
       {error && (
         <p role="alert" className="mt-3 text-sm text-[color:var(--color-sunset-600)]">{error}</p>
       )}
-    </section>
+    </CollapsibleCard>
   )
 }
