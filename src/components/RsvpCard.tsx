@@ -6,6 +6,7 @@ import { humanizeError } from '../lib/errors'
 import { supabase } from '../lib/supabase'
 import { useMembers, useRsvps } from '../lib/trips'
 import type { Rsvp, RsvpStatus } from '../lib/types'
+import CollapsibleCard from './CollapsibleCard'
 
 const CHOICES: { value: RsvpStatus; label: string }[] = [
   { value: 'yes', label: "I'm in" },
@@ -147,12 +148,24 @@ export default function RsvpCard({ tripId, past = false }: { tripId: string; pas
   const maybe = rsvps.filter((r) => r.status === 'maybe')
   const name = (r: Rsvp) => r.guest_name ?? r.profile?.display_name ?? 'Someone'
 
+  // Collapsed, the header answers both questions worth asking: what you said,
+  // and how many are in. Left open until you have answered, since an unanswered
+  // card is a thing to do rather than a thing to read.
+  const summary = [
+    past ? null : answered ? ANSWERED[mine!.status] : 'not answered yet',
+    going.length > 0 ? `${going.length} coming` : null,
+  ]
+    .filter(Boolean)
+    .join(' · ')
+
   return (
-    <section className="rounded-xl border border-[color:var(--border)] bg-[color:var(--surface-raised)] p-5">
-      <h3 className="flex items-center gap-2 font-medium">
-        <CalendarCheck className="size-4" aria-hidden="true" />
-        {past ? 'Who came' : 'Are you coming?'}
-      </h3>
+    <CollapsibleCard
+      id="rsvp"
+      icon={<CalendarCheck className="size-4" aria-hidden="true" />}
+      title={past ? 'Who came' : 'Are you coming?'}
+      summary={summary}
+      defaultOpen={!past && !answered}
+    >
 
       {!past && answered && !editing && (
         <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 rounded-lg bg-[color:var(--surface-sunk)] px-4 py-3">
@@ -352,6 +365,6 @@ export default function RsvpCard({ tripId, past = false }: { tripId: string; pas
         )}
 
       </div>
-    </section>
+    </CollapsibleCard>
   )
 }

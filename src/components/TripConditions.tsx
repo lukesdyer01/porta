@@ -1,8 +1,8 @@
-import { ChevronDown, CloudRain, Waves } from 'lucide-react'
-import { useState } from 'react'
+import { CloudRain, Waves } from 'lucide-react'
 import { useTides, useWeather } from '../lib/conditions'
 import { dayLabel } from '../lib/trips'
 import type { House, Trip } from '../lib/types'
+import CollapsibleCard from './CollapsibleCard'
 
 const hhmm = (t: string) => {
   const [h, m] = t.split(':').map(Number)
@@ -12,29 +12,7 @@ const hhmm = (t: string) => {
   return `${hour}:${String(m).padStart(2, '0')}${am ? 'am' : 'pm'}`
 }
 
-const STORAGE_KEY = 'porta:conditions-open'
-
-/** Remembering the choice is per-device and may throw in a private window. */
-function readPref(): boolean {
-  try {
-    return localStorage.getItem(STORAGE_KEY) === '1'
-  } catch {
-    return false
-  }
-}
-
 export default function TripConditions({ trip, house }: { trip: Trip; house?: House | null }) {
-  const [open, setOpen] = useState(readPref)
-
-  const toggle = () => {
-    const next = !open
-    setOpen(next)
-    try {
-      localStorage.setItem(STORAGE_KEY, next ? '1' : '0')
-    } catch {
-      // A remembered preference is a nicety, not something worth failing over.
-    }
-  }
 
   const { data: weather = [] } = useWeather(
     trip.start_date,
@@ -61,25 +39,13 @@ export default function TripConditions({ trip, house }: { trip: Trip; house?: Ho
     : `${days.length} ${days.length === 1 ? 'day' : 'days'}`
 
   return (
-    <section className="rounded-xl border border-[color:var(--border)] bg-[color:var(--surface-raised)]">
-      <button
-        type="button"
-        onClick={toggle}
-        aria-expanded={open}
-        className="flex w-full items-center gap-2 p-5 text-left"
-      >
-        <Waves className="size-4 shrink-0" aria-hidden="true" />
-        <span className="font-medium">Weather &amp; tides</span>
-        <span className="truncate text-sm text-[color:var(--text-muted)]">{summary}</span>
-        <ChevronDown
-          className={`ml-auto size-4 shrink-0 text-[color:var(--text-muted)] transition-transform ${open ? 'rotate-180' : ''}`}
-          aria-hidden="true"
-        />
-      </button>
-
-      {open && (
-      <div className="px-5 pb-5">
-      <ul className="divide-y divide-[color:var(--border)] border-t border-[color:var(--border)]">
+    <CollapsibleCard
+      id="conditions"
+      icon={<Waves className="size-4" aria-hidden="true" />}
+      title="Weather & tides"
+      summary={summary}
+    >
+      <ul className="divide-y divide-[color:var(--border)]">
         {days.map((d) => {
           const w = byDate.get(d)
           const t = tides[d] ?? []
@@ -120,8 +86,6 @@ export default function TripConditions({ trip, house }: { trip: Trip; house?: Ho
       <p className="mt-3 text-xs text-[color:var(--text-muted)]">
         Forecast from Open-Meteo; tides from NOAA station 8775237, Port Aransas.
       </p>
-      </div>
-      )}
-    </section>
+    </CollapsibleCard>
   )
 }
