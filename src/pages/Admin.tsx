@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Check, ShieldCheck, Trash2, UserPlus } from 'lucide-react'
 import { useState } from 'react'
 import { useAuth } from '../auth/useAuth'
+import InviteCodes from '../components/InviteCodes'
 import { parseEmails } from '../lib/parseEmails'
 import { supabase } from '../lib/supabase'
 import type { AddMembersResult, AdminMember } from '../lib/types'
@@ -102,6 +103,8 @@ export default function Admin() {
       <p className="mt-1 text-sm text-[color:var(--text-muted)]">
         Anyone on this list can sign in. Everyone else is turned away.
       </p>
+
+      <InviteCodes onError={setProblem} />
 
       {/* ---- invite ---- */}
       <section className="mt-6 rounded-xl border border-[color:var(--border)] bg-[color:var(--surface-raised)] p-5">

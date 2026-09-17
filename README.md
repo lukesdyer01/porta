@@ -23,9 +23,10 @@ security**, with no server to catch a mistake. Two consequences:
 
 1. No codes, addresses, passwords, or personal details belong in this repo. They live in
    the database, behind a login.
-2. Sign-up is invite-by-email only — an address is on the allowlist or it is not, with no
-   shared code to leak or rotate. Because any signed-in member can read the house's gate
-   and wifi codes, **who can sign up _is_ the security boundary**.
+2. Sign-up needs either an invited email address or the shared family code, and redeeming
+   the code adds that address to the allowlist so access stays individually revocable.
+   Because any signed-in member can read the house's gate and wifi codes, **who can sign up
+   _is_ the security boundary** — so the code must not be guessable from the site itself.
 
 ## Local development
 

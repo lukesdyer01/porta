@@ -54,20 +54,23 @@ from.
 
 ## Inviting the rest of the family
 
-Sign in and use the **Members** screen (organizers only). Paste in any number of addresses
-— commas, one per line, or copied straight out of a mail client — and invite them in one
-go. The same screen promotes and demotes organizers and revokes access.
+**Text them the family code.** They enter their email, the site asks for the code, and
+they're in — no action from you. Anyone who joins that way is written into the allowlist,
+so you keep a per-person record and can still revoke individually.
 
-Access is invite-by-email only: an address is on the list or it is not. Removing someone
-takes effect on their next click, and anything they wrote stays.
+Manage the code on the **Members** screen: add one, turn it off, or delete it. Avoid
+anything guessable from the site itself — "king" is written on every page.
 
-Two guards worth knowing about, both enforced in the database rather than the page, so a
-hand-written API call cannot get around them:
+The same screen invites people directly by email (paste any number at once), promotes and
+demotes organizers, and removes access.
+
+Two guards live in the database rather than the page, so a hand-written API call cannot get
+around them:
 
 - The last organizer cannot be removed or demoted — otherwise nobody could create a trip
   and only raw SQL could fix it.
-- Changing anyone's role goes through a function. Members are not granted write access to
-  the `role` column at all, so a member cannot promote themselves.
+- Role changes go through a function. Members are not granted write access to the `role`
+  column at all, so a member cannot promote themselves.
 
 
 ## After any future migration

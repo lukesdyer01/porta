@@ -36,3 +36,13 @@ export interface AddMembersResult {
   existing: string[]
   invalid: string[]
 }
+
+export interface InviteCode {
+  code: string
+  label: string | null
+  active: boolean
+  expires_at: string | null
+  max_uses: number | null
+  uses: number
+  created_at: string
+}
