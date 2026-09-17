@@ -1,7 +1,8 @@
-import { BookOpen, ListChecks, LogOut, Map, User, Users, X } from 'lucide-react'
+import { BookOpen, ListChecks, LogOut, Map, RefreshCw, User, Users, X } from 'lucide-react'
 import { useEffect } from 'react'
 import { NavLink } from 'react-router-dom'
 import { useAuth } from '../auth/useAuth'
+import { buildStamp, hardRefresh } from '../lib/hardRefresh'
 import { useTripContext } from '../trip/useTrip'
 
 export default function MoreSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
@@ -69,6 +70,17 @@ export default function MoreSheet({ open, onClose }: { open: boolean; onClose: (
               </NavLink>
             </li>
           ))}
+          <li>
+            <button
+              onClick={() => void hardRefresh()}
+              className="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-base transition hover:bg-[color:var(--surface-sunk)]"
+            >
+              <RefreshCw className="size-5 shrink-0" aria-hidden="true" />
+              <span className="flex-1 text-left">Get the latest version</span>
+              <span className="text-xs text-[color:var(--text-muted)]">{buildStamp()}</span>
+            </button>
+          </li>
+
           <li>
             <button
               onClick={() => {
