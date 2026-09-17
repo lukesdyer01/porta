@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { useAuth } from '../auth/useAuth'
 import { humanizeError } from '../lib/errors'
 import { supabase } from '../lib/supabase'
-import { useRsvps } from '../lib/trips'
+import { useMembers, useRsvps } from '../lib/trips'
 import type { Rsvp, RsvpStatus } from '../lib/types'
 
 const CHOICES: { value: RsvpStatus; label: string }[] = [
@@ -23,6 +23,7 @@ export default function RsvpCard({ tripId, past = false }: { tripId: string; pas
   const { profile, isOwner } = useAuth()
   const qc = useQueryClient()
   const { data: rsvps = [], isLoading } = useRsvps(tripId)
+  const { data: allMembers = [] } = useMembers()
 
   const mine = rsvps.find((r) => r.profile_id === profile?.id)
   const [error, setError] = useState<string | null>(null)
@@ -70,21 +71,24 @@ export default function RsvpCard({ tripId, past = false }: { tripId: string; pas
 
   // Family who will never log in still belong on the roster. Only the owner
   // may add them, and only as guests — a member's own answer stays theirs.
-  const addGuest = useMutation({
-    mutationFn: async () => {
+  const addToRoster = useMutation({
+    mutationFn: async (target: { memberId?: string; guestName?: string }) => {
       if (!profile) throw new Error('Not signed in.')
-      const name = guestName.trim()
-      if (name.length < 2) throw new Error('Give them a name.')
-      const { error } = await supabase.from('rsvps').insert({
-        trip_id: tripId,
-        profile_id: null,
-        guest_name: name,
-        status: 'yes',
-        adults: 1,
-        kids: 0,
-        notes: guestNote.trim() || null,
-        created_by: profile.id,
-      })
+      const { error } = await supabase.from('rsvps').upsert(
+        {
+          trip_id: tripId,
+          profile_id: target.memberId ?? null,
+          guest_name: target.memberId ? null : (target.guestName ?? '').trim(),
+          status: 'yes',
+          adults: 1,
+          kids: 0,
+          notes: guestNote.trim() || null,
+          created_by: profile.id,
+        },
+        // A member may already have answered no; upserting turns that into the
+        // yes being recorded rather than failing on the unique constraint.
+        { onConflict: 'trip_id,profile_id' },
+      )
       if (error) throw new Error(error.message)
     },
     onSuccess: () => {
@@ -92,6 +96,7 @@ export default function RsvpCard({ tripId, past = false }: { tripId: string; pas
       setGuestName('')
       setGuestNote('')
       void qc.invalidateQueries({ queryKey: ['rsvps', tripId] })
+      void qc.invalidateQueries({ queryKey: ['house-info'] })
     },
     onError: (e: Error) => setError(humanizeError(e)),
   })
@@ -124,6 +129,16 @@ export default function RsvpCard({ tripId, past = false }: { tripId: string; pas
     },
     onError: (e: Error) => setError(humanizeError(e)),
   })
+
+  // Members who match what's typed and are not already on the roster.
+  const onRoster = new Set(rsvps.map((r) => r.profile_id).filter(Boolean) as string[])
+  const query = guestName.trim().toLowerCase()
+  const matches =
+    query.length >= 2
+      ? allMembers
+          .filter((m) => !onRoster.has(m.id) && m.display_name.toLowerCase().includes(query))
+          .slice(0, 6)
+      : []
 
   const answered = Boolean(mine && mine.status !== 'pending')
   const showChoices = !past && (!answered || editing)
@@ -208,13 +223,23 @@ export default function RsvpCard({ tripId, past = false }: { tripId: string; pas
           </p>
         )}
 
-        {going.length > 0 && (
-          <p className="mt-2 text-sm">
+        {going.some((r) => r.profile_id) && (
+          <ul className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-sm">
             {going
               .filter((r) => r.profile_id)
-              .map(name)
-              .join(', ')}
-          </p>
+              .map((r) => (
+                <li key={r.id}>
+                  {name(r)}
+                  {/* An answer someone else typed should not read as the
+                      person's own. They can change it whenever they like. */}
+                  {r.created_by !== r.profile_id && (
+                    <span className="ml-1 text-xs text-[color:var(--text-muted)]">
+                      (added by {r.adder?.display_name ?? 'someone'})
+                    </span>
+                  )}
+                </li>
+              ))}
+          </ul>
         )}
 
         {going.some((r) => !r.profile_id) && (
@@ -264,44 +289,68 @@ export default function RsvpCard({ tripId, past = false }: { tripId: string; pas
         )}
 
         {isOwner && !past && (
-          <form
-            onSubmit={(e) => {
-              e.preventDefault()
-              addGuest.mutate()
-            }}
-            className="mt-4 flex flex-wrap items-center gap-2 border-t border-[color:var(--border)] pt-4"
-          >
-            <UserPlus className="size-4 shrink-0 text-[color:var(--text-muted)]" aria-hidden="true" />
-            <input
-              value={guestName}
-              onChange={(e) => setGuestName(e.target.value)}
-              placeholder="Someone without an account, e.g. Grandma"
-              aria-label="Add a guest"
-              className="min-w-44 flex-1 rounded-lg border border-[color:var(--border)] bg-[color:var(--surface)] px-3 py-2 text-sm outline-none focus:border-[color:var(--accent)]"
-            />
-            <input
-              value={guestNote}
-              onChange={(e) => setGuestNote(e.target.value)}
-              placeholder="Note (optional) — e.g. arrives Thursday"
-              aria-label="Note about this guest"
-              className="min-w-44 flex-1 rounded-lg border border-[color:var(--border)] bg-[color:var(--surface)] px-3 py-2 text-sm outline-none focus:border-[color:var(--accent)]"
-            />
-            <button
-              type="submit"
-              disabled={addGuest.isPending || guestName.trim().length < 2}
-              className="flex items-center gap-1.5 rounded-lg border border-[color:var(--border)] px-3 py-2 text-sm transition hover:bg-[color:var(--surface-sunk)] disabled:opacity-50"
-            >
-              <Plus className="size-4" aria-hidden="true" />
-              Add
-            </button>
-          </form>
+          <div className="mt-4 border-t border-[color:var(--border)] pt-4">
+            <p className="flex items-center gap-1.5 text-sm font-medium">
+              <UserPlus className="size-4" aria-hidden="true" />
+              Add someone to the roster
+            </p>
+
+            <div className="mt-2 flex flex-wrap gap-2">
+              <input
+                value={guestName}
+                onChange={(e) => setGuestName(e.target.value)}
+                placeholder="Search family, or type a name"
+                aria-label="Search for someone to add"
+                className="min-w-44 flex-1 rounded-lg border border-[color:var(--border)] bg-[color:var(--surface)] px-3 py-2 text-sm outline-none focus:border-[color:var(--accent)]"
+              />
+              <input
+                value={guestNote}
+                onChange={(e) => setGuestNote(e.target.value)}
+                placeholder="Note (optional)"
+                aria-label="Note about this person"
+                className="min-w-44 flex-1 rounded-lg border border-[color:var(--border)] bg-[color:var(--surface)] px-3 py-2 text-sm outline-none focus:border-[color:var(--accent)]"
+              />
+            </div>
+
+            {/* Real accounts first: picking one avoids a second copy of
+                somebody who is already on the roster under their own name. */}
+            {matches.length > 0 && (
+              <ul className="mt-2 flex flex-wrap gap-2">
+                {matches.map((m) => (
+                  <li key={m.id}>
+                    <button
+                      type="button"
+                      disabled={addToRoster.isPending}
+                      onClick={() => addToRoster.mutate({ memberId: m.id })}
+                      className="flex items-center gap-1.5 rounded-full border border-[color:var(--accent)] px-3 py-1 text-sm font-medium text-[color:var(--accent)] transition hover:bg-[color:var(--accent)] hover:text-[color:var(--accent-contrast)] disabled:opacity-50"
+                    >
+                      <Plus className="size-3.5" aria-hidden="true" />
+                      {m.display_name}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+
+            {guestName.trim().length >= 2 && (
+              <button
+                type="button"
+                disabled={addToRoster.isPending}
+                onClick={() => addToRoster.mutate({ guestName })}
+                className="mt-2 flex items-center gap-1.5 text-sm text-[color:var(--text-muted)] underline underline-offset-4 hover:text-[color:var(--text)] disabled:opacity-50"
+              >
+                <Plus className="size-3.5" aria-hidden="true" />
+                Add &ldquo;{guestName.trim()}&rdquo; as a guest instead
+              </button>
+            )}
+
+            <p className="mt-2 text-xs text-[color:var(--text-muted)]">
+              Family with an account are shown above &mdash; pick them rather than typing a name,
+              or they end up on the roster twice. They can change whatever you put down.
+            </p>
+          </div>
         )}
 
-        {maybe.length > 0 && (
-          <p className="mt-2 text-sm text-[color:var(--text-muted)]">
-            Maybe: {maybe.map(name).join(', ')}
-          </p>
-        )}
       </div>
     </section>
   )

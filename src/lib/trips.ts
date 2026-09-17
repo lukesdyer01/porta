@@ -90,7 +90,7 @@ export function useRsvps(tripId: string | undefined) {
           // rsvps points at profiles twice (profile_id and created_by), so the
           // foreign key has to be named or PostgREST refuses the embed with
           // PGRST201 and the whole roster query fails.
-          'id, trip_id, profile_id, guest_name, status, adults, kids, headcount, arrival_date, departure_date, notes, profile:profiles!rsvps_profile_id_fkey(display_name, household_id)',
+          'id, trip_id, profile_id, guest_name, status, adults, kids, headcount, arrival_date, departure_date, notes, created_by, profile:profiles!rsvps_profile_id_fkey(display_name, household_id), adder:profiles!rsvps_created_by_fkey(display_name)',
         )
         .eq('trip_id', tripId!)
       if (error) throw new Error(error.message)

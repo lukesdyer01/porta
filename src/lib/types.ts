@@ -102,7 +102,10 @@ export interface Rsvp {
   arrival_date: string | null
   departure_date: string | null
   notes: string | null
+  created_by: string
   profile: { display_name: string; household_id: string | null } | null
+  /** Who typed it — differs from the person when the owner entered it. */
+  adder: { display_name: string } | null
 }
 
 export interface HouseReview {
