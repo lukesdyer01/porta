@@ -1,9 +1,10 @@
 import { useQuery } from '@tanstack/react-query'
-import { MapPin } from 'lucide-react'
+import { MapPin, Sparkles } from 'lucide-react'
 import { MapContainer, Marker, Popup, TileLayer, useMap } from 'react-leaflet'
 import { Link } from 'react-router-dom'
 import { divIcon, latLngBounds } from 'leaflet'
 import 'leaflet/dist/leaflet.css'
+import { useAmenitiesByYear } from '../lib/amenities'
 import { money } from '../lib/trips'
 import { supabase } from '../lib/supabase'
 
@@ -35,6 +36,7 @@ function FitPins({ pins }: { pins: Pin[] }) {
 }
 
 export default function TripMap() {
+  const { data: amenities = [] } = useAmenitiesByYear()
   const { data: pins = [], isLoading } = useQuery({
     queryKey: ['house-pins'],
     queryFn: async (): Promise<Pin[]> => {
@@ -99,6 +101,37 @@ export default function TripMap() {
       </div>
 
       {isLoading && <p className="mt-3 text-sm text-[color:var(--text-muted)]">Loading…</p>}
+
+      {amenities.length > 0 && (
+        <section className="mt-8">
+          <h3 className="flex items-center gap-2 font-medium">
+            <Sparkles className="size-4" aria-hidden="true" />
+            What each year had
+          </h3>
+          <p className="mt-1 text-sm text-[color:var(--text-muted)]">
+            Most widely shared first &mdash; useful when deciding what next year&rsquo;s place
+            needs.
+          </p>
+          <ul className="mt-3 divide-y divide-[color:var(--border)] rounded-xl border border-[color:var(--border)] bg-[color:var(--surface-raised)]">
+            {amenities.map((a) => (
+              <li key={a.id} className="flex flex-wrap items-center gap-x-3 gap-y-2 p-4">
+                <span className="min-w-36 flex-1 text-sm font-medium">{a.name}</span>
+                <span className="flex flex-wrap gap-1.5">
+                  {a.years.map((y) => (
+                    <Link
+                      key={y}
+                      to={`/trip/${y}`}
+                      className="rounded-full bg-[color:var(--color-gulf-100)] px-2.5 py-0.5 font-mono text-xs font-medium text-[color:var(--color-gulf-700)] transition hover:opacity-80"
+                    >
+                      {y}
+                    </Link>
+                  ))}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       {sorted.length > 0 && (
         <ul className="mt-5 divide-y divide-[color:var(--border)] rounded-xl border border-[color:var(--border)] bg-[color:var(--surface-raised)]">

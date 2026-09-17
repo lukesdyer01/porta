@@ -2,6 +2,7 @@ import { ExternalLink, Home as HomeIcon, MapPin, Pencil, Plus } from 'lucide-rea
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../auth/useAuth'
+import AmenitiesPanel from '../components/AmenitiesPanel'
 import DeleteTrip from '../components/DeleteTrip'
 import HouseForm from '../components/HouseForm'
 import HouseGallery from '../components/HouseGallery'
@@ -241,6 +242,13 @@ export default function Trip() {
           </div>
         )}
       </section>
+
+      {/* ---- amenities ---- */}
+      {house && (
+        <div className="mt-6">
+          <AmenitiesPanel houseId={house.id} />
+        </div>
+      )}
 
       {/* ---- codes ---- */}
       {house && (

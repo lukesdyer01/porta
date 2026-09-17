@@ -142,3 +142,9 @@ export interface TripEvent {
   location: string | null
   url: string | null
 }
+
+export interface Amenity {
+  id: string
+  name: string
+  sort_order: number
+}
