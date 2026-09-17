@@ -1,5 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { MapPin } from 'lucide-react'
 import { useState } from 'react'
+import { geocode } from '../lib/geocode'
 import { supabase } from '../lib/supabase'
 import { fromCents, toCents } from '../lib/trips'
 import type { House } from '../lib/types'
@@ -32,6 +34,34 @@ export default function HouseForm({
     notes: house?.notes ?? '',
   })
   const [error, setError] = useState<string | null>(null)
+  const [looking, setLooking] = useState(false)
+  const [found, setFound] = useState<string | null>(null)
+
+  async function lookUpCoordinates() {
+    setLooking(true)
+    setError(null)
+    setFound(null)
+    try {
+      const hit = await geocode({
+        line1: f.address_line1,
+        city: f.city,
+        state: f.state,
+        postalCode: f.postal_code,
+      })
+      if (!hit) {
+        setError("Couldn't find that address. Check it, or type the coordinates in by hand.")
+        return
+      }
+      setF((p) => ({ ...p, lat: String(hit.lat), lng: String(hit.lng) }))
+      // Show the match: geocoders fail by finding the WRONG place, not by
+      // finding nothing, and only a human can spot that.
+      setFound(hit.label)
+    } catch (e) {
+      setError(humanizeError(e))
+    } finally {
+      setLooking(false)
+    }
+  }
   const set = (k: keyof typeof f) => (e: { target: { value: string } }) =>
     setF((p) => ({ ...p, [k]: e.target.value }))
 
@@ -142,10 +172,25 @@ export default function HouseForm({
           <input id="lng" inputMode="decimal" value={f.lng} onChange={set('lng')} placeholder="-97.0611" className={`mt-1.5 ${fieldClass}`} />
         </div>
       </div>
-      <p className="-mt-2 text-xs text-[color:var(--text-muted)]">
-        Optional, and only used for the map of past houses. Right-click the spot in Google Maps
-        and the coordinates are the first thing in the menu.
-      </p>
+      <div className="-mt-2">
+        <button
+          type="button"
+          onClick={() => void lookUpCoordinates()}
+          disabled={looking || !f.address_line1.trim()}
+          className="flex items-center gap-1.5 rounded-lg border border-[color:var(--border)] px-3 py-1.5 text-sm transition hover:bg-[color:var(--surface-sunk)] disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          <MapPin className="size-4" aria-hidden="true" />
+          {looking ? 'Looking up…' : 'Find from the address'}
+        </button>
+        {found ? (
+          <p className="mt-1.5 text-xs text-[color:var(--accent)]">Found: {found}</p>
+        ) : (
+          <p className="mt-1.5 text-xs text-[color:var(--text-muted)]">
+            Only used for the map of past houses. Or right-click the spot in Google Maps &mdash;
+            the coordinates are the first thing in the menu.
+          </p>
+        )}
+      </div>
 
       <div className="grid gap-4 sm:grid-cols-3">
         <div>
