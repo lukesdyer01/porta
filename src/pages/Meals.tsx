@@ -5,7 +5,7 @@ import { useAuth } from '../auth/useAuth'
 import { humanizeError } from '../lib/errors'
 import { fieldClass } from '../components/TripForm'
 import { supabase } from '../lib/supabase'
-import { dayLabel, tripDays, useMeals } from '../lib/trips'
+import { dayLabel, tripDays, useHouseholds, useMeals } from '../lib/trips'
 import { usePageTitle } from '../lib/usePageTitle'
 import { useTripContext } from '../trip/useTrip'
 
@@ -15,6 +15,7 @@ export default function Meals() {
   const qc = useQueryClient()
   const { trip } = useTripContext()
   const { data: meals = [], isLoading } = useMeals(trip?.id)
+  const { data: households = [] } = useHouseholds()
 
   const days = tripDays(trip?.start_date ?? null, trip?.end_date ?? null)
   const byDate = new Map(meals.filter((m) => m.meal_type === 'dinner').map((m) => [m.meal_date, m]))
@@ -74,6 +75,7 @@ export default function Meals() {
       <p className="mt-1 text-sm text-[color:var(--text-muted)]">
         One family cooks each night. Claim whichever nights suit you &mdash; once a night is
         taken, only that family can change it.
+        {isOrganizer && ' As an organizer you can put any family on any night.'}
       </p>
 
       {!myHousehold && !isOrganizer && (
@@ -113,7 +115,32 @@ export default function Meals() {
                 </div>
 
                 <div className="flex min-w-44 items-center gap-2">
-                  {free ? (
+                  {isOrganizer ? (
+                    <>
+                      {/* The database already allowed this; only the way to
+                          say it was missing. */}
+                      <select
+                        aria-label={`Who cooks on ${dayLabel(d)}`}
+                        value={eatingOut ? '__out' : (claimedBy ?? '')}
+                        disabled={save.isPending}
+                        onChange={(e) => {
+                          const v = e.target.value
+                          save.mutate({
+                            date: d,
+                            householdId: v === '__out' || v === '' ? null : v,
+                            eatOut: v === '__out',
+                          })
+                        }}
+                        className="min-w-40 rounded-lg border border-[color:var(--border)] bg-[color:var(--surface)] px-3 py-2 text-sm outline-none focus:border-[color:var(--accent)] disabled:opacity-50"
+                      >
+                        <option value="">Nobody yet</option>
+                        {households.map((h) => (
+                          <option key={h.id} value={h.id}>{h.name}</option>
+                        ))}
+                        <option value="__out">Eating out</option>
+                      </select>
+                    </>
+                  ) : free ? (
                     <>
                       <button
                         type="button"
