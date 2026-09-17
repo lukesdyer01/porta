@@ -73,7 +73,7 @@ export default function Calendar() {
       </p>
 
       {adding && (
-        <div className="mt-5 rounded-xl border border-[color:var(--border)] bg-[color:var(--surface-raised)] p-5">
+        <div className="mt-5 card p-5">
           <EventForm
             tripId={trip.id}
             defaultDate={trip.start_date}
@@ -101,7 +101,7 @@ export default function Calendar() {
             <h3 className="font-display text-sm font-semibold tracking-wide text-[color:var(--text-muted)] uppercase">
               {dayLabel(d)}
             </h3>
-            <ul className="mt-2 divide-y divide-[color:var(--border)] rounded-xl border border-[color:var(--border)] bg-[color:var(--surface-raised)]">
+            <ul className="mt-2 divide-y divide-[color:var(--border)] card">
               {byDay.get(d)!.map((e) =>
                 editingId === e.id ? (
                   <li key={e.id} className="p-4">

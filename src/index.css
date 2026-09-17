@@ -6,11 +6,11 @@
    scrapbook, not a dashboard.
 --------------------------------------------------------------------------- */
 @theme {
-  --color-sand-50: #fdfaf5;
-  --color-sand-100: #f8f1e5;
-  --color-sand-200: #efe3cf;
-  --color-sand-300: #e2cfae;
-  --color-sand-400: #cdb188;
+  --color-sand-50: #fbf6ec;
+  --color-sand-100: #f4ece0;
+  --color-sand-200: #ece0cd;
+  --color-sand-300: #cdb899;
+  --color-sand-400: #bfa680;
 
   --color-gulf-50: #eefaf9;
   --color-gulf-100: #d2f2ef;
@@ -22,9 +22,13 @@
 
   --color-sunset-300: #f7b08a;
   --color-sunset-500: #e8734a;
-  --color-sunset-600: #d15a32;
+  /* Used as TEXT for errors, so it has to clear 4.5:1 on sand and cream.
+     The old #d15a32 managed only 3.9:1. */
+  --color-sunset-600: #a8401a;
 
-  --color-ink-500: #6b7b84;
+  /* #6b7b84 was already failing at 4.21:1 on the old near-white page, and a
+     warmer background makes it worse. This clears 4.5:1 on sand and cream. */
+  --color-ink-500: #55646d;
   --color-ink-700: #3a4b55;
   --color-ink-900: #1c2b33;
 
@@ -34,40 +38,48 @@
 
 /* Semantic tokens. Light is the base definition; dark only redefines. */
 :root {
-  --surface: var(--color-sand-50);
-  --surface-raised: #ffffff;
-  --surface-sunk: var(--color-sand-100);
-  --border: var(--color-sand-200);
+  --surface: #f4ece0;
+  --surface-raised: #fffcf6;
+  --surface-sunk: #ece0cd;
+  --border: var(--color-sand-300);
   --text: var(--color-ink-900);
   --text-muted: var(--color-ink-500);
-  --accent: var(--color-gulf-600);
+  --accent: #12706b;
   --accent-contrast: #ffffff;
+  /* Sky at the top, sand at the bottom. Fixed so it stays put while the page
+     scrolls rather than repeating down a long trip page. */
+  --page-wash: linear-gradient(180deg, #e7f1ef 0%, #f4ece0 42%, #f0e4d2 100%);
+  --card-shadow: 0 1px 2px rgba(120, 94, 58, 0.05), 0 6px 16px -8px rgba(120, 94, 58, 0.18);
   color-scheme: light;
 }
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme='light']) {
-    --surface: #0f1b21;
-    --surface-raised: #17262d;
-    --surface-sunk: #0a1419;
-    --border: #24383f;
-    --text: var(--color-sand-100);
-    --text-muted: #8fa3ad;
+    --surface: #0d1f24;
+    --surface-raised: #142c33;
+    --surface-sunk: #0a181c;
+    --border: #25424a;
+    --text: #f2e9db;
+    --text-muted: #9db3bb;
     --accent: var(--color-gulf-300);
     --accent-contrast: var(--color-gulf-900);
+    --page-wash: linear-gradient(180deg, #0a2a30 0%, #0d1f24 45%, #101a1d 100%);
+    --card-shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 6px 16px -8px rgba(0, 0, 0, 0.5);
     color-scheme: dark;
   }
 }
 
 :root[data-theme='dark'] {
-  --surface: #0f1b21;
-  --surface-raised: #17262d;
-  --surface-sunk: #0a1419;
-  --border: #24383f;
-  --text: var(--color-sand-100);
-  --text-muted: #8fa3ad;
+  --surface: #0d1f24;
+  --surface-raised: #142c33;
+  --surface-sunk: #0a181c;
+  --border: #25424a;
+  --text: #f2e9db;
+  --text-muted: #9db3bb;
   --accent: var(--color-gulf-300);
   --accent-contrast: var(--color-gulf-900);
+  --page-wash: linear-gradient(180deg, #0a2a30 0%, #0d1f24 45%, #101a1d 100%);
+  --card-shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 6px 16px -8px rgba(0, 0, 0, 0.5);
   color-scheme: dark;
 }
 
@@ -79,7 +91,7 @@ body,
 
 body {
   margin: 0;
-  background: var(--surface);
+  background: var(--page-wash) var(--surface) fixed;
   color: var(--text);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
@@ -122,4 +134,16 @@ body {
   :where(input, textarea, select).text-xs {
     font-size: 1rem;
   }
+}
+
+/* ---------------------------------------------------------------------------
+   One card recipe, previously copy-pasted into fifteen files. Cream on sand
+   separates well enough that the hard outline was doing no work — a soft,
+   warm-toned shadow reads as paper on sand instead of a box on a form.
+--------------------------------------------------------------------------- */
+.card {
+  border-radius: 14px;
+  background: var(--surface-raised);
+  border: 1px solid color-mix(in srgb, var(--border) 55%, transparent);
+  box-shadow: var(--card-shadow);
 }

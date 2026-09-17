@@ -108,7 +108,7 @@ export default function Journal() {
       </p>
 
       {editing !== null && (
-        <div className="mt-5 space-y-4 rounded-xl border border-[color:var(--border)] bg-[color:var(--surface-raised)] p-5">
+        <div className="mt-5 space-y-4 card p-5">
           <div className="grid gap-4 sm:grid-cols-[1fr_auto]">
             <div>
               <label htmlFor="jtitle" className={labelClass}>Title</label>
@@ -150,7 +150,7 @@ export default function Journal() {
 
       <div className="mt-6 space-y-6">
         {entries.map((e) => (
-          <article key={e.id} className="rounded-xl border border-[color:var(--border)] bg-[color:var(--surface-raised)] p-5">
+          <article key={e.id} className="card p-5">
             <div className="flex flex-wrap items-baseline gap-x-3">
               {e.title && <h3 className="font-display text-lg font-semibold">{e.title}</h3>}
               <p className="text-sm text-[color:var(--text-muted)]">

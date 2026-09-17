@@ -27,12 +27,12 @@ export default function AppShell() {
       {!online && (
         <p
           role="status"
-          className="bg-[color:var(--color-sunset-500)] px-4 py-1.5 text-center text-sm text-white"
+          className="bg-[color:var(--color-sunset-600)] px-4 py-1.5 text-center text-sm text-white"
         >
           You&rsquo;re offline — changes won&rsquo;t save until the signal comes back.
         </p>
       )}
-      <header className="sticky top-0 z-20 border-b border-[color:var(--border)] bg-[color:var(--surface-raised)]/90 backdrop-blur">
+      <header className="sticky top-0 z-20 bg-[color:var(--surface-raised)]/90 backdrop-blur">
         <div className="mx-auto flex max-w-5xl items-center gap-3 px-4 pt-3">
           <div className="min-w-0 flex-1">
             <h1 className="font-display truncate text-xl leading-tight font-semibold">
@@ -99,6 +99,18 @@ export default function AppShell() {
             ))}
           </div>
         </nav>
+        <svg
+          className="block h-3 w-full text-[color:var(--surface-raised)]"
+          viewBox="0 0 1200 24"
+          preserveAspectRatio="none"
+          aria-hidden="true"
+          focusable="false"
+        >
+          <path
+            d="M0 0h1200v8c-75 0-75 10-150 10S975 8 900 8s-75 10-150 10S675 8 600 8s-75 10-150 10S375 8 300 8s-75 10-150 10S75 8 0 8z"
+            fill="currentColor"
+          />
+        </svg>
       </header>
 
       {/* pb-24 on mobile keeps the last row of content clear of the tab bar. */}

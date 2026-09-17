@@ -101,7 +101,7 @@ export default function Expenses() {
       </p>
 
       {mine && (
-        <p className="mt-4 rounded-xl border border-[color:var(--border)] bg-[color:var(--surface-raised)] px-4 py-3 text-sm">
+        <p className="mt-4 card px-4 py-3 text-sm">
           You paid <span className="font-medium">{money(Number(mine.paid_cents))}</span> and owe{' '}
           <span className="font-medium">{money(Number(mine.owed_cents))}</span> &mdash;{' '}
           {Number(mine.net_cents) === 0 ? (
@@ -119,7 +119,7 @@ export default function Expenses() {
       )}
 
       {adding && (
-        <div className="mt-5 rounded-xl border border-[color:var(--border)] bg-[color:var(--surface-raised)] p-5">
+        <div className="mt-5 card p-5">
           <ExpenseForm tripId={trip.id} onDone={() => setAdding(false)} />
         </div>
       )}
@@ -138,7 +138,7 @@ export default function Expenses() {
             The shortest way to square everyone &mdash; {transfers.length}{' '}
             {transfers.length === 1 ? 'payment' : 'payments'}, not one per expense.
           </p>
-          <ul className="mt-3 divide-y divide-[color:var(--border)] rounded-xl border border-[color:var(--border)] bg-[color:var(--surface-raised)]">
+          <ul className="mt-3 divide-y divide-[color:var(--border)] card">
             {transfers.map((t, i) => (
               <li key={i} className="flex flex-wrap items-center gap-x-3 gap-y-2 p-4 text-sm">
                 <span className="font-medium">{nameOf(t.fromProfileId)}</span>
@@ -166,7 +166,7 @@ export default function Expenses() {
       {expenses.length > 0 && (
         <section className="mt-8">
           <h3 className="font-medium">Everything logged</h3>
-          <ul className="mt-3 divide-y divide-[color:var(--border)] rounded-xl border border-[color:var(--border)] bg-[color:var(--surface-raised)]">
+          <ul className="mt-3 divide-y divide-[color:var(--border)] card">
             {expenses.map((e) => {
               const myShare = e.expense_splits.find((s) => s.profile_id === profile?.id)
               // Mirrors the update policy: payer, whoever entered it, or an

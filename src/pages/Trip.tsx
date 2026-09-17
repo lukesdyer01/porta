@@ -124,7 +124,7 @@ export default function Trip() {
       {isOrganizer && (
         <div className="mt-4">
           {editingTrip ? (
-            <div className="rounded-xl border border-[color:var(--border)] bg-[color:var(--surface-raised)] p-5">
+            <div className="card p-5">
               <TripForm trip={trip} onDone={() => setEditingTrip(false)} />
             </div>
           ) : (
@@ -164,11 +164,11 @@ export default function Trip() {
         </h3>
 
         {editingHouse ? (
-          <div className="mt-3 rounded-xl border border-[color:var(--border)] bg-[color:var(--surface-raised)] p-5">
+          <div className="mt-3 card p-5">
             <HouseForm tripId={trip.id} house={house} onDone={() => setEditingHouse(false)} />
           </div>
         ) : house ? (
-          <div className="mt-3 rounded-xl border border-[color:var(--border)] bg-[color:var(--surface-raised)] p-5">
+          <div className="mt-3 card p-5">
             <HouseGallery houseId={house.id} tripId={trip.id} />
             {house.name && <p className="font-display text-lg font-semibold">{house.name}</p>}
 

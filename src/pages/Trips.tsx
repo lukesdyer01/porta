@@ -145,7 +145,7 @@ export default function Trips() {
               <li key={t.id}>
                 <Link
                   to={`/trip/${t.year}`}
-                  className="group block overflow-hidden rounded-xl border border-[color:var(--border)] bg-[color:var(--surface-raised)] transition hover:border-[color:var(--accent)]"
+                  className="group block overflow-hidden card transition hover:border-[color:var(--accent)]"
                 >
                   {/* Fixed aspect either way, so a trip with no photo yet does
                       not collapse into a thin strip next to ones that have. */}

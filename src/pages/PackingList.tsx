@@ -181,7 +181,7 @@ export default function PackingList() {
               </h3>
               <p className="mt-0.5 text-xs text-[color:var(--text-muted)]">{hint}</p>
 
-              <ul className="mt-2 divide-y divide-[color:var(--border)] rounded-xl border border-[color:var(--border)] bg-[color:var(--surface-raised)]">
+              <ul className="mt-2 divide-y divide-[color:var(--border)] card">
                 {list.length === 0 ? (
                   <li className="p-3 text-sm text-[color:var(--text-muted)]">Nothing yet.</li>
                 ) : (

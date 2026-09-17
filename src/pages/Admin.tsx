@@ -140,7 +140,7 @@ export default function Admin() {
       {isOwner && <Households onError={setProblem} />}
 
       {/* ---- invite ---- */}
-      <section className="mt-6 rounded-xl border border-[color:var(--border)] bg-[color:var(--surface-raised)] p-5">
+      <section className="mt-6 card p-5">
         <h3 className="flex items-center gap-2 font-medium">
           <UserPlus className="size-4" aria-hidden="true" />
           Invite people
@@ -229,7 +229,7 @@ export default function Admin() {
           </p>
         )}
 
-        <ul className="mt-3 divide-y divide-[color:var(--border)] rounded-xl border border-[color:var(--border)] bg-[color:var(--surface-raised)]">
+        <ul className="mt-3 divide-y divide-[color:var(--border)] card">
           {members.map((m) => {
             const isYou = m.email === profile?.email
             const role = m.profile_role ?? m.invited_role

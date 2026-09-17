@@ -44,7 +44,7 @@ export default function CollapsibleCard({
   }
 
   return (
-    <section className="rounded-xl border border-[color:var(--border)] bg-[color:var(--surface-raised)]">
+    <section className="card">
       <button
         type="button"
         onClick={toggle}

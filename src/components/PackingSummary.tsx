@@ -11,7 +11,7 @@ export default function PackingSummary({ tripId, year }: { tripId: string; year:
   return (
     <Link
       to={`/list/${year}`}
-      className="flex items-center gap-3 rounded-xl border border-[color:var(--border)] bg-[color:var(--surface-raised)] px-5 py-4 transition hover:border-[color:var(--accent)]"
+      className="flex items-center gap-3 card px-5 py-4 transition hover:border-[color:var(--accent)]"
     >
       <ListChecks className="size-5 shrink-0 text-[color:var(--text-muted)]" aria-hidden="true" />
       <div className="min-w-0 flex-1">

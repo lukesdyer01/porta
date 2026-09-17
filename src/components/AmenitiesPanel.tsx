@@ -92,7 +92,7 @@ export default function AmenitiesPanel({ houseId }: { houseId: string }) {
   const busy = toggle.isPending || add.isPending
 
   return (
-    <section className="rounded-xl border border-[color:var(--border)] bg-[color:var(--surface-raised)] p-5">
+    <section className="card p-5">
       <div className="flex items-center gap-2">
         <h3 className="flex items-center gap-2 font-medium">
           <Sparkles className="size-4" aria-hidden="true" />

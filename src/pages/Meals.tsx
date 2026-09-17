@@ -97,7 +97,7 @@ export default function Meals() {
       ) : isLoading ? (
         <p className="mt-4 text-sm text-[color:var(--text-muted)]">Loading…</p>
       ) : (
-        <ul className="mt-5 divide-y divide-[color:var(--border)] rounded-xl border border-[color:var(--border)] bg-[color:var(--surface-raised)]">
+        <ul className="mt-5 divide-y divide-[color:var(--border)] card">
           {days.map((d) => {
             const meal = byDate.get(d)
             const claimedBy = meal?.household_id ?? null

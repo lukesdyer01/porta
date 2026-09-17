@@ -112,7 +112,7 @@ export default function TripMap() {
             Most widely shared first &mdash; useful when deciding what next year&rsquo;s place
             needs.
           </p>
-          <ul className="mt-3 divide-y divide-[color:var(--border)] rounded-xl border border-[color:var(--border)] bg-[color:var(--surface-raised)]">
+          <ul className="mt-3 divide-y divide-[color:var(--border)] card">
             {amenities.map((a) => (
               <li key={a.id} className="flex flex-wrap items-center gap-x-3 gap-y-2 p-4">
                 <span className="min-w-36 flex-1 text-sm font-medium">{a.name}</span>
@@ -134,7 +134,7 @@ export default function TripMap() {
       )}
 
       {sorted.length > 0 && (
-        <ul className="mt-5 divide-y divide-[color:var(--border)] rounded-xl border border-[color:var(--border)] bg-[color:var(--surface-raised)]">
+        <ul className="mt-5 divide-y divide-[color:var(--border)] card">
           {sorted.map((p) => (
             <li key={p.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 p-4 text-sm">
               <span className="w-12 shrink-0 font-display font-semibold">{p.trip?.year}</span>

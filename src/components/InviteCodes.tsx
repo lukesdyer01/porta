@@ -70,7 +70,7 @@ export default function InviteCodes({ onError }: { onError: (m: string | null) =
   const live = codes.filter((c) => c.active)
 
   return (
-    <section className="mt-6 rounded-xl border border-[color:var(--border)] bg-[color:var(--surface-raised)] p-5">
+    <section className="mt-6 card p-5">
       <h3 className="flex items-center gap-2 font-medium">
         <KeyRound className="size-4" aria-hidden="true" />
         Family code

@@ -109,7 +109,7 @@ export default function HouseReviews({ houseId }: { houseId: string }) {
   const others = reviews.filter((r) => r.profile_id !== profile?.id)
 
   return (
-    <section className="rounded-xl border border-[color:var(--border)] bg-[color:var(--surface-raised)] p-5">
+    <section className="card p-5">
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
         <h3 className="flex items-center gap-2 font-medium">
           <MessageSquare className="size-4" aria-hidden="true" />
