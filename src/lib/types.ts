@@ -46,3 +46,42 @@ export interface InviteCode {
   uses: number
   created_at: string
 }
+
+export type TripStatus = 'planning' | 'upcoming' | 'active' | 'archived'
+
+export interface Trip {
+  id: string
+  year: number
+  name: string
+  start_date: string | null
+  end_date: string | null
+  status: TripStatus
+  notes: string | null
+}
+
+export interface House {
+  id: string
+  trip_id: string
+  name: string
+  address_line1: string | null
+  address_line2: string | null
+  city: string
+  state: string
+  postal_code: string | null
+  lat: number | null
+  lng: number | null
+  rental_url: string | null
+  rental_platform: string | null
+  cost_cents: number | null
+  bedrooms: number | null
+  sleeps: number | null
+  notes: string | null
+}
+
+export interface HouseInfo {
+  id: string
+  house_id: string
+  label: string
+  value: string
+  sort_order: number
+}
