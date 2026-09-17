@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { CalendarCheck, Check, Pencil, Users } from 'lucide-react'
+import { CalendarCheck, Check, Pencil, Plus, UserPlus, Users, X } from 'lucide-react'
 import { useState } from 'react'
 import { useAuth } from '../auth/useAuth'
 import { humanizeError } from '../lib/errors'
@@ -20,13 +20,14 @@ const ANSWERED: Record<string, string> = {
 }
 
 export default function RsvpCard({ tripId, past = false }: { tripId: string; past?: boolean }) {
-  const { profile } = useAuth()
+  const { profile, isOwner } = useAuth()
   const qc = useQueryClient()
   const { data: rsvps = [], isLoading } = useRsvps(tripId)
 
   const mine = rsvps.find((r) => r.profile_id === profile?.id)
   const [error, setError] = useState<string | null>(null)
   const [editing, setEditing] = useState(false)
+  const [guestName, setGuestName] = useState('')
 
   const save = useMutation({
     mutationFn: async (next: RsvpStatus) => {
@@ -62,6 +63,44 @@ export default function RsvpCard({ tripId, past = false }: { tripId: string; pas
       void qc.invalidateQueries({ queryKey: ['rsvps', tripId] })
       // Saying yes unlocks the house codes, so that panel has to refetch.
       void qc.invalidateQueries({ queryKey: ['house-info'] })
+    },
+    onError: (e: Error) => setError(humanizeError(e)),
+  })
+
+  // Family who will never log in still belong on the roster. Only the owner
+  // may add them, and only as guests — a member's own answer stays theirs.
+  const addGuest = useMutation({
+    mutationFn: async () => {
+      if (!profile) throw new Error('Not signed in.')
+      const name = guestName.trim()
+      if (name.length < 2) throw new Error('Give them a name.')
+      const { error } = await supabase.from('rsvps').insert({
+        trip_id: tripId,
+        profile_id: null,
+        guest_name: name,
+        status: 'yes',
+        adults: 1,
+        kids: 0,
+        created_by: profile.id,
+      })
+      if (error) throw new Error(error.message)
+    },
+    onSuccess: () => {
+      setError(null)
+      setGuestName('')
+      void qc.invalidateQueries({ queryKey: ['rsvps', tripId] })
+    },
+    onError: (e: Error) => setError(humanizeError(e)),
+  })
+
+  const removeGuest = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from('rsvps').delete().eq('id', id)
+      if (error) throw new Error(error.message)
+    },
+    onSuccess: () => {
+      setError(null)
+      void qc.invalidateQueries({ queryKey: ['rsvps', tripId] })
     },
     onError: (e: Error) => setError(humanizeError(e)),
   })
@@ -150,7 +189,65 @@ export default function RsvpCard({ tripId, past = false }: { tripId: string; pas
         )}
 
         {going.length > 0 && (
-          <p className="mt-2 text-sm">{going.map(name).join(', ')}</p>
+          <p className="mt-2 text-sm">
+            {going
+              .filter((r) => r.profile_id)
+              .map(name)
+              .join(', ')}
+          </p>
+        )}
+
+        {going.some((r) => !r.profile_id) && (
+          <ul className="mt-2 flex flex-wrap gap-2">
+            {going
+              .filter((r) => !r.profile_id)
+              .map((r) => (
+                <li
+                  key={r.id}
+                  className="flex items-center gap-1.5 rounded-full bg-[color:var(--surface-sunk)] px-2.5 py-1 text-sm"
+                >
+                  {name(r)}
+                  <span className="text-xs text-[color:var(--text-muted)]">guest</span>
+                  {isOwner && !past && (
+                    <button
+                      type="button"
+                      onClick={() => removeGuest.mutate(r.id)}
+                      aria-label={`Remove ${name(r)}`}
+                      className="text-[color:var(--text-muted)] hover:text-[color:var(--text)]"
+                    >
+                      <X className="size-3.5" aria-hidden="true" />
+                    </button>
+                  )}
+                </li>
+              ))}
+          </ul>
+        )}
+
+        {isOwner && !past && (
+          <form
+            onSubmit={(e) => {
+              e.preventDefault()
+              addGuest.mutate()
+            }}
+            className="mt-4 flex flex-wrap items-center gap-2 border-t border-[color:var(--border)] pt-4"
+          >
+            <UserPlus className="size-4 shrink-0 text-[color:var(--text-muted)]" aria-hidden="true" />
+            <input
+              value={guestName}
+              onChange={(e) => setGuestName(e.target.value)}
+              placeholder="Someone without an account, e.g. Grandma"
+              aria-label="Add a guest"
+              className="min-w-48 flex-1 rounded-lg border border-[color:var(--border)] bg-[color:var(--surface)] px-3 py-2 text-sm outline-none focus:border-[color:var(--accent)]"
+            />
+            <button
+              type="submit"
+              disabled={addGuest.isPending || guestName.trim().length < 2}
+              className="flex items-center gap-1.5 rounded-lg border border-[color:var(--border)] px-3 py-2 text-sm transition hover:bg-[color:var(--surface-sunk)] disabled:opacity-50"
+            >
+              <Plus className="size-4" aria-hidden="true" />
+              Add
+            </button>
+          </form>
         )}
 
         {maybe.length > 0 && (
